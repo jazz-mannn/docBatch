@@ -1,0 +1,135 @@
+.tutorial-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.68);
+  backdrop-filter: blur(6px);
+}
+
+.tutorial-dialog {
+  position: relative;
+  width: min(620px, 100%);
+  max-height: min(760px, calc(100vh - 40px));
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 22px;
+  background: white;
+  padding: 34px;
+  box-shadow: 0 30px 90px rgba(15, 23, 42, 0.35);
+}
+
+.tutorial-progress {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 7px;
+  margin-bottom: 28px;
+}
+
+.tutorial-progress span {
+  height: 5px;
+  border-radius: 99px;
+  background: #e4e7ec;
+}
+
+.tutorial-progress span.active {
+  background: var(--blue);
+}
+
+.tutorial-step-label {
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tutorial-dialog h2 {
+  margin: 12px 0 14px;
+  font-size: clamp(28px, 5vw, 42px);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+}
+
+.tutorial-dialog > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+.tutorial-dialog ul {
+  display: grid;
+  gap: 10px;
+  margin: 24px 0 30px;
+  padding: 0;
+  list-style: none;
+}
+
+.tutorial-dialog li {
+  position: relative;
+  padding: 12px 14px 12px 42px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: #fbfcfd;
+  color: #344054;
+  line-height: 1.45;
+}
+
+.tutorial-dialog li::before {
+  content: "✓";
+  position: absolute;
+  left: 14px;
+  top: 12px;
+  color: var(--success);
+  font-weight: 850;
+}
+
+.tutorial-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tutorial-actions button {
+  min-width: 120px;
+}
+
+.tutorial-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.tutorial-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--soft);
+  color: #475467;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.tutorial-close:hover {
+  background: #e4e7ec;
+}
+
+@media (max-width: 560px) {
+  .tutorial-dialog {
+    padding: 28px 20px 22px;
+  }
+
+  .tutorial-actions {
+    flex-direction: column-reverse;
+  }
+
+  .tutorial-actions button {
+    width: 100%;
+  }
+}

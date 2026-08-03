@@ -3,10 +3,14 @@ export type SpreadsheetRow = Record<string, string>;
 export type FontFamily = 'Helvetica' | 'Times Roman' | 'Courier';
 export type FontWeight = 'regular' | 'bold';
 export type TextAlignment = 'left' | 'center' | 'right';
+export type FieldContentMode = 'column' | 'custom';
 
 export interface PositionedField {
   id: string;
   column: string;
+  contentMode: FieldContentMode;
+  customText: string;
+  coverOriginal: boolean;
   x: number;
   y: number;
   width: number;
