@@ -1,9 +1,10 @@
 interface HeaderProps {
   inGenerator: boolean;
   onNavigate: (view: 'home' | 'generator') => void;
+  onOpenTutorial: () => void;
 }
 
-export function Header({ inGenerator, onNavigate }: HeaderProps) {
+export function Header({ inGenerator, onNavigate, onOpenTutorial }: HeaderProps) {
   return (
     <header className="site-header">
       <button className="brand" type="button" onClick={() => onNavigate('home')}>
@@ -12,6 +13,7 @@ export function Header({ inGenerator, onNavigate }: HeaderProps) {
       </button>
       <nav aria-label="Primary navigation">
         <button type="button" onClick={() => onNavigate('home')}>Overview</button>
+        <button type="button" onClick={onOpenTutorial}>Tutorial</button>
         <a href="https://github.com/Rash-Au/docBatch" target="_blank" rel="noreferrer">Repository</a>
         <button className="nav-cta" type="button" onClick={() => onNavigate('generator')}>
           {inGenerator ? 'New batch' : 'Open generator'}
