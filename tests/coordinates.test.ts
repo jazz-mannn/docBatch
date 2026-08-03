@@ -7,6 +7,7 @@ const field: PositionedField = {
   column: 'Name',
   contentMode: 'column',
   customText: '',
+  coverOriginal: true,
   x: 0.25,
   y: 0.2,
   width: 0.5,
