@@ -1,0 +1,22 @@
+.tutorial-dialog li {
+  color: #2b211b !important;
+  font-size: 16px !important;
+  font-weight: 620 !important;
+  line-height: 1.5 !important;
+}
+
+.tutorial-dialog li::before {
+  top: 50% !important;
+  color: #11a85b !important;
+  font-size: 20px !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  transform: translateY(-50%);
+  text-shadow: 0 0 10px rgba(17, 168, 91, 0.2);
+}
+
+@media (max-width: 560px) {
+  .tutorial-dialog li {
+    font-size: 15px !important;
+  }
+}
