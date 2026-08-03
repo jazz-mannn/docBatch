@@ -131,7 +131,7 @@ export function PdfWorkspace({
 
             return (
               <button
-                className={`positioned-field ${selectedFieldId === field.id ? 'selected' : ''}`}
+                className={`positioned-field ${field.coverOriginal ? 'cover-original' : ''} ${selectedFieldId === field.id ? 'selected' : ''}`}
                 key={field.id}
                 type="button"
                 style={{
