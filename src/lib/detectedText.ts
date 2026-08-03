@@ -4,7 +4,6 @@ import type {
   FontFamily,
   FontStyle,
   FontWeight,
-  PositionedField,
 } from '../types';
 
 const MAX_DETECTED_ITEMS = 250;
@@ -87,29 +86,5 @@ export function detectDominantFont(items: DetectedPdfText[]): DetectedFontDefaul
   return {
     ...dominant.defaults,
     fontSizeRatio: Math.min(0.08, Math.max(0.015, dominant.weightedSize / dominant.score)),
-  };
-}
-
-/**
- * Legacy compatibility helper. The website no longer exposes original PDF text
- * as selectable editor targets, but keeping this export avoids breaking older
- * development branches while the new generator is adopted.
- */
-export function fieldFromDetectedText(item: DetectedPdfText): PositionedField {
-  return {
-    id: crypto.randomUUID(),
-    column: '',
-    contentMode: 'custom',
-    customText: item.text.slice(0, 200),
-    coverOriginal: true,
-    x: item.x,
-    y: item.y,
-    width: Math.min(0.9, Math.max(0.08, item.width + 0.015)),
-    fontSizeRatio: Math.min(0.08, Math.max(0.015, item.fontSizeRatio)),
-    fontFamily: item.fontFamily,
-    fontWeight: item.fontWeight,
-    fontStyle: item.fontStyle,
-    alignment: 'left',
-    color: '#111827',
   };
 }
