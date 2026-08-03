@@ -6,7 +6,7 @@
   border-radius: 12px;
   background: #fbfcfd;
   cursor: pointer;
-  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
 .file-drop-zone:hover,
@@ -20,6 +20,7 @@
 
 .file-drop-zone.dragging {
   border-style: solid;
+  transform: translateY(-1px);
 }
 
 .file-drop-zone.has-file {
@@ -53,4 +54,28 @@
   margin-top: 7px;
   color: #7a8494;
   font-size: 11px;
+}
+
+.drop-zone-feedback {
+  margin-top: 9px;
+  color: #16845b;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.drop-zone-feedback::before {
+  content: '✓';
+  margin-right: 6px;
+  color: #22c77a;
+  font-weight: 900;
+}
+
+.drop-zone-feedback.error {
+  color: #d55b4a;
+}
+
+.drop-zone-feedback.error::before {
+  content: '!';
+  color: #ef6b58;
 }
