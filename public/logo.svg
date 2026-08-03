@@ -1,7 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title description">
   <title id="title">DocBatch</title>
-  <rect width="64" height="64" rx="16" fill="#111827"/>
-  <path d="M19 13h19l9 9v29H19z" fill="#fff"/>
-  <path d="M38 13v10h9" fill="#dbeafe"/>
-  <path d="M25 31h16M25 37h16M25 43h11" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
+  <desc id="description">Stacked documents with a purple automation mark</desc>
+  <defs>
+    <linearGradient id="surface" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1A102F"/>
+      <stop offset="1" stop-color="#050507"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="18" y1="14" x2="48" y2="50" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#C084FC"/>
+      <stop offset="0.48" stop-color="#8B5CF6"/>
+      <stop offset="1" stop-color="#5B21B6"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="64" height="64" rx="17" fill="url(#surface)"/>
+  <rect x="14" y="16" width="28" height="34" rx="5" fill="#0A0A0F" stroke="#3B2A58" stroke-width="2"/>
+  <rect x="21" y="11" width="29" height="36" rx="5" fill="#111018" stroke="url(#accent)" stroke-width="2.5"/>
+  <path d="M28 22h15M28 28h15M28 34h9" stroke="#E9D5FF" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M42.5 39.5l3 3 6-7" fill="none" stroke="#C084FC" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
 </svg>
