@@ -3,6 +3,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import type { PdfPageSize, PositionedField, SpreadsheetRow } from '../types';
 import { moveField } from '../lib/coordinates';
+import { resolveFieldText } from '../lib/fieldText';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
@@ -123,28 +124,34 @@ export function PdfWorkspace({
       <div className="pdf-stage" ref={stageRef}>
         <canvas ref={canvasRef} aria-label="PDF template preview" />
         <div className="field-layer">
-          {fields.map((field) => (
-            <button
-              className={`positioned-field ${selectedFieldId === field.id ? 'selected' : ''}`}
-              key={field.id}
-              type="button"
-              style={{
-                left: `${field.x * 100}%`,
-                top: `${field.y * 100}%`,
-                width: `${field.width * 100}%`,
-                fontSize: `${Math.max(10, field.fontSizeRatio * stageWidth)}px`,
-                fontFamily: field.fontFamily,
-                fontWeight: field.fontWeight === 'bold' ? 700 : 400,
-                textAlign: field.alignment,
-                color: field.color,
-              }}
-              onPointerDown={(event) => beginDrag(event, field)}
-              onClick={() => onSelectField(field.id)}
-              title={`Drag ${field.column}`}
-            >
-              {row?.[field.column] || `{{${field.column}}}`}
-            </button>
-          ))}
+          {fields.map((field) => {
+            const resolvedText = resolveFieldText(field, row);
+            const fallback = field.contentMode === 'custom' ? 'Custom text' : `{{${field.column}}}`;
+            const label = field.contentMode === 'custom' ? 'custom text' : field.column;
+
+            return (
+              <button
+                className={`positioned-field ${selectedFieldId === field.id ? 'selected' : ''}`}
+                key={field.id}
+                type="button"
+                style={{
+                  left: `${field.x * 100}%`,
+                  top: `${field.y * 100}%`,
+                  width: `${field.width * 100}%`,
+                  fontSize: `${Math.max(10, field.fontSizeRatio * stageWidth)}px`,
+                  fontFamily: field.fontFamily,
+                  fontWeight: field.fontWeight === 'bold' ? 700 : 400,
+                  textAlign: field.alignment,
+                  color: field.color,
+                }}
+                onPointerDown={(event) => beginDrag(event, field)}
+                onClick={() => onSelectField(field.id)}
+                title={`Drag ${label}`}
+              >
+                {resolvedText || fallback}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
