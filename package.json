@@ -4,6 +4,8 @@
   "version": "0.3.0",
   "type": "module",
   "description": "Deployable bulk PDF document automation website using PDF templates and spreadsheet data.",
+  "author": "Farai Rashayi",
+  "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
