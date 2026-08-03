@@ -7,6 +7,7 @@ import './components/EditorInteractions.css';
 import './components/LandingEnhancements.css';
 import './components/WebsiteTheme.css';
 import './components/OrangeMinimal.css';
+import './components/StudioContrast.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
