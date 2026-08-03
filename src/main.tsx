@@ -5,6 +5,7 @@ import './styles.css';
 import './components/GeneratorEnhancements.css';
 import './components/EditorInteractions.css';
 import './components/LandingEnhancements.css';
+import './components/WebsiteTheme.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
