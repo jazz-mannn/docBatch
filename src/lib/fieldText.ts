@@ -4,7 +4,9 @@ export const MAX_CUSTOM_TEXT_LENGTH = 200;
 export const MAX_POSITIONED_FIELDS = 20;
 
 export function normalizeCustomText(value: string): string {
-  return value.slice(0, MAX_CUSTOM_TEXT_LENGTH);
+  return value
+    .replace(/\s*\r?\n\s*/g, ' ')
+    .slice(0, MAX_CUSTOM_TEXT_LENGTH);
 }
 
 export function resolveFieldText(
