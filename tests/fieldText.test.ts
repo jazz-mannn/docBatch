@@ -18,6 +18,7 @@ const baseField: PositionedField = {
   fontSizeRatio: 0.03,
   fontFamily: 'Helvetica',
   fontWeight: 'regular',
+  fontStyle: 'normal',
   alignment: 'center',
   color: '#111827',
 };
