@@ -10,18 +10,33 @@ interface TutorialProps {
 const tutorialSteps = [
   {
     title: 'Add the two source files',
-    body: 'Drop one PDF template and one CSV or Excel spreadsheet. The app accepts two active files per session, with separate size limits for performance.',
+    body: 'Drop one PDF template and one CSV or Excel spreadsheet. The app accepts two active source files per session, with separate size limits for performance.',
     points: ['PDF template: one file, up to 8 MB', 'Spreadsheet: one file, up to 5 MB', 'Spreadsheet batches: up to 500 rows'],
   },
   {
-    title: 'Place spreadsheet and custom text fields',
-    body: 'Add any spreadsheet column to the page, or add text that should appear on every generated document.',
-    points: ['Up to 20 positioned fields', 'Custom text limited to 200 characters per field', 'Drag fields directly over the PDF preview'],
+    title: 'Select text already in the PDF',
+    body: 'For text-based PDFs, DocBatch detects the original text automatically. Turn on Select PDF text, then click the original text that you want to replace.',
+    points: ['The selected text becomes an editable custom field', 'Position, size, and the nearest standard PDF font are selected automatically', 'Scanned image-only PDFs require manual fields'],
   },
   {
-    title: 'Cover and replace existing PDF text',
-    body: 'New fields use a white cover block by default. The block uses the selected field width to hide the original PDF content before drawing the new text.',
-    points: ['Adjust the field and cover width together', 'Change font, alignment, size, and colour', 'Turn the white cover off when the original background should remain visible'],
+    title: 'Add spreadsheet and custom text fields',
+    body: 'Add a spreadsheet column for changing row data, or add custom text that should appear on every generated document.',
+    points: ['Up to 20 positioned text fields', 'Custom text limited to 200 characters per field', 'Repeated fields are translucent and labelled Duplicate'],
+  },
+  {
+    title: 'Replace, move, or delete fields',
+    body: 'White cover blocks hide the original PDF content before new text is drawn. Drag any element to reposition it. While dragging, move it over the red bin and release to delete it.',
+    points: ['The Delete selected field button remains available', 'Adjust the field and cover width together', 'The final exported field is opaque even though the editor preview is translucent'],
+  },
+  {
+    title: 'Add signatures and logos',
+    body: 'Upload transparent PNG or JPEG images and position them on the document. Signatures and logos are included in every generated PDF.',
+    points: ['2 MB maximum per image', '4096 × 4096 pixels maximum', 'Up to four images total and two per image type'],
+  },
+  {
+    title: 'Choose professional PDF fonts',
+    body: 'Use Helvetica, Times Roman, or Courier with regular, bold, italic, and bold italic variants. These are standard PDF fonts and do not require external font files.',
+    points: ['Detected text selects the nearest family and style', 'Change alignment, text size, colour, and cover width', 'Long values shrink to fit the selected field width'],
   },
   {
     title: 'Build the output file names',
@@ -31,7 +46,7 @@ const tutorialSteps = [
   {
     title: 'Preview and export',
     body: 'Switch between spreadsheet records to check placement. When ready, generate all PDFs and download one ZIP archive.',
-    points: ['Files remain in the browser session', 'No uploaded document is stored by the app', 'Reset the session to clear the current files and fields'],
+    points: ['Files remain in the browser session', 'No uploaded document or image is stored by the app', 'Reset the session to clear the current files and elements'],
   },
 ];
 
