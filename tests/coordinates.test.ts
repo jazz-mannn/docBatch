@@ -5,6 +5,8 @@ import { moveField, toPdfPlacement } from '../src/lib/coordinates';
 const field: PositionedField = {
   id: 'field-1',
   column: 'Name',
+  contentMode: 'column',
+  customText: '',
   x: 0.25,
   y: 0.2,
   width: 0.5,
