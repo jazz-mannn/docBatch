@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useRef,
   useState,
   type ChangeEvent,
@@ -6,8 +7,11 @@ import {
   type KeyboardEvent,
 } from 'react';
 import {
+  classifySourceFile,
   formatBytes,
+  routeSourceFileDrop,
   validateFileSelection,
+  type SourceFileKind,
   type UploadPolicy,
 } from '../lib/fileUpload';
 import './FileDropZone.css';
@@ -22,6 +26,60 @@ interface FileDropZoneProps {
   onError: (message: string) => void;
 }
 
+type AcceptedSourceKind = Exclude<SourceFileKind, 'unsupported'>;
+
+interface DropSubscriber {
+  acceptFile: (file: File) => Promise<void>;
+  reportError: (message: string) => void;
+}
+
+const dropSubscribers = new Map<AcceptedSourceKind, DropSubscriber>();
+
+function kindForPolicy(policy: UploadPolicy): AcceptedSourceKind {
+  return policy.extensions.includes('pdf') ? 'pdf' : 'spreadsheet';
+}
+
+function filesFromDrop(event: DragEvent<HTMLDivElement>): File[] {
+  const itemFiles = Array.from(event.dataTransfer.items ?? [])
+    .filter((item) => item.kind === 'file')
+    .map((item) => item.getAsFile())
+    .filter((file): file is File => Boolean(file));
+
+  return itemFiles.length > 0
+    ? itemFiles
+    : Array.from(event.dataTransfer.files ?? []);
+}
+
+async function dispatchDroppedFiles(files: readonly File[], fallbackError: (message: string) => void) {
+  const routed = routeSourceFileDrop(files);
+  if (!routed.ok) {
+    fallbackError(routed.message);
+    return;
+  }
+
+  const tasks: Promise<void>[] = [];
+
+  if (routed.pdf) {
+    const subscriber = dropSubscribers.get('pdf');
+    if (!subscriber) {
+      fallbackError('The PDF template slot is not available. Refresh the page and try again.');
+      return;
+    }
+    tasks.push(subscriber.acceptFile(routed.pdf));
+  }
+
+  if (routed.spreadsheet) {
+    const subscriber = dropSubscribers.get('spreadsheet');
+    if (!subscriber) {
+      fallbackError('The spreadsheet slot is not available. Refresh the page and try again.');
+      return;
+    }
+    tasks.push(subscriber.acceptFile(routed.spreadsheet));
+  }
+
+  await Promise.all(tasks);
+}
+
 export function FileDropZone({
   title,
   accept,
@@ -33,27 +91,66 @@ export function FileDropZone({
 }: FileDropZoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [feedback, setFeedback] = useState('');
+  const sourceKind = kindForPolicy(policy);
 
-  async function processFiles(files: readonly File[]) {
-    const result = validateFileSelection(files, policy);
+  async function processSingleFile(file: File) {
+    const result = validateFileSelection([file], policy);
     if (!result.ok) {
+      setFeedback('');
       onError(result.message);
       return;
     }
 
-    await onFile(result.file);
+    try {
+      onError('');
+      setFeedback(`${sourceKind === 'pdf' ? 'PDF template' : 'Spreadsheet'} detected. Reading “${file.name}”…`);
+      await onFile(result.file);
+      setFeedback(`${sourceKind === 'pdf' ? 'PDF template' : 'Spreadsheet'} added successfully.`);
+    } catch (caught) {
+      setFeedback('');
+      onError(caught instanceof Error ? caught.message : `Unable to add the ${policy.label}.`);
+    }
   }
+
+  useEffect(() => {
+    const subscriber: DropSubscriber = {
+      acceptFile: processSingleFile,
+      reportError: onError,
+    };
+    dropSubscribers.set(sourceKind, subscriber);
+
+    return () => {
+      if (dropSubscribers.get(sourceKind) === subscriber) {
+        dropSubscribers.delete(sourceKind);
+      }
+    };
+  });
 
   function handleInput(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
-    void processFiles(files);
+    const result = validateFileSelection(files, policy);
+
+    if (!result.ok) {
+      setFeedback('');
+      onError(result.message);
+    } else {
+      void processSingleFile(result.file);
+    }
+
     event.target.value = '';
   }
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
+    event.stopPropagation();
     setIsDragging(false);
-    void processFiles(Array.from(event.dataTransfer.files));
+
+    const files = filesFromDrop(event);
+    void dispatchDroppedFiles(files, (message) => {
+      setFeedback('');
+      onError(message);
+    });
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -62,6 +159,10 @@ export function FileDropZone({
       inputRef.current?.click();
     }
   }
+
+  const detectedFileKind = fileName
+    ? classifySourceFile({ name: fileName, size: 0 })
+    : null;
 
   return (
     <div
@@ -73,14 +174,17 @@ export function FileDropZone({
       onKeyDown={handleKeyDown}
       onDragEnter={(event) => {
         event.preventDefault();
+        event.stopPropagation();
         setIsDragging(true);
       }}
       onDragOver={(event) => {
         event.preventDefault();
+        event.stopPropagation();
         event.dataTransfer.dropEffect = 'copy';
         setIsDragging(true);
       }}
       onDragLeave={(event) => {
+        event.preventDefault();
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
           setIsDragging(false);
         }
@@ -100,6 +204,14 @@ export function FileDropZone({
       <span className="drop-zone-limit">
         {policy.maxFiles} file maximum · {formatBytes(policy.maxBytes)} limit
       </span>
+      {feedback ? (
+        <span className="drop-zone-feedback" role="status" aria-live="polite">{feedback}</span>
+      ) : null}
+      {fileName && detectedFileKind !== sourceKind ? (
+        <span className="drop-zone-feedback error" role="alert">
+          This file does not match the {policy.label} slot.
+        </span>
+      ) : null}
     </div>
   );
 }
