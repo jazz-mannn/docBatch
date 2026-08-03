@@ -8,6 +8,7 @@ import './components/LandingEnhancements.css';
 import './components/WebsiteTheme.css';
 import './components/OrangeMinimal.css';
 import './components/StudioContrast.css';
+import './components/TutorialReadability.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
