@@ -1,0 +1,62 @@
+.audience-section {
+  padding: 110px 0 20px;
+}
+
+.audience-heading {
+  max-width: 800px;
+  margin-bottom: 36px;
+}
+
+.audience-heading h2 {
+  margin: 16px 0;
+  font-size: clamp(34px, 4vw, 54px);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+}
+
+.audience-heading p {
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.7;
+}
+
+.audience-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.audience-card {
+  min-height: 220px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: white;
+}
+
+.audience-card h3 {
+  margin: 0 0 14px;
+  font-size: 18px;
+}
+
+.audience-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+@media (max-width: 980px) {
+  .audience-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .audience-section {
+    padding-top: 72px;
+  }
+
+  .audience-grid {
+    grid-template-columns: 1fr;
+  }
+}
