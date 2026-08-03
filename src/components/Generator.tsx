@@ -18,6 +18,13 @@ import {
   MAX_POSITIONED_FIELDS,
   normalizeCustomText,
 } from '../lib/fieldText';
+import {
+  MAX_FILENAME_TEMPLATE_LENGTH,
+  appendFilenameToken,
+  normalizeFilenameTemplate,
+  renderFilenameTemplate,
+  validateFilenameTemplate,
+} from '../lib/filenameTemplate';
 import { FileDropZone } from './FileDropZone';
 import { PdfWorkspace } from './PdfWorkspace';
 
@@ -38,6 +45,7 @@ function createField(
     column,
     contentMode,
     customText: contentMode === 'custom' ? 'Enter text for every document' : '',
+    coverOriginal: true,
     x: 0.25,
     y: Math.min(0.2 + index * 0.08, 0.8),
     width: 0.5,
@@ -55,16 +63,28 @@ export function Generator() {
   const [fields, setFields] = useState<PositionedField[]>([]);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [recordIndex, setRecordIndex] = useState(0);
-  const [filenameColumn, setFilenameColumn] = useState('');
+  const [filenamePattern, setFilenamePattern] = useState('');
   const [pageSize, setPageSize] = useState<PdfPageSize | null>(null);
   const [error, setError] = useState('');
   const [progress, setProgress] = useState<GenerationProgress>(INITIAL_PROGRESS);
 
   const selectedField = fields.find((field) => field.id === selectedFieldId) ?? null;
   const previewRow = spreadsheet?.rows[recordIndex];
-  const ready = Boolean(template && spreadsheet && fields.length > 0 && filenameColumn);
   const activeFileCount = Number(Boolean(template)) + Number(Boolean(spreadsheet));
   const fieldLimitReached = fields.length >= MAX_POSITIONED_FIELDS;
+  const filenameError = spreadsheet
+    ? validateFilenameTemplate(filenamePattern, spreadsheet.headers)
+    : null;
+  const filenamePreview = spreadsheet && previewRow && !filenameError
+    ? renderFilenameTemplate(filenamePattern, previewRow, recordIndex)
+    : '';
+  const ready = Boolean(
+    template
+    && spreadsheet
+    && fields.length > 0
+    && filenamePattern.trim()
+    && !filenameError,
+  );
 
   const updatePageSize = useCallback((size: PdfPageSize) => {
     setPageSize((current) => {
@@ -89,13 +109,15 @@ export function Generator() {
     try {
       setError('');
       const parsed = await parseSpreadsheet(file);
+      const firstHeader = parsed.headers[0] ?? 'row';
       setSpreadsheet(parsed);
       setFields([]);
       setSelectedFieldId(null);
       setRecordIndex(0);
-      setFilenameColumn(parsed.headers[0] ?? '');
+      setFilenamePattern(`Document - {${firstHeader}}`);
     } catch (caught) {
       setSpreadsheet(null);
+      setFilenamePattern('');
       setError(caught instanceof Error ? caught.message : 'Unable to read the spreadsheet.');
     }
   }
@@ -140,8 +162,12 @@ export function Generator() {
     setSelectedFieldId(null);
   }
 
+  function insertFilenameToken(token: string) {
+    setFilenamePattern((current) => appendFilenameToken(current, token));
+  }
+
   async function generate() {
-    if (!template || !spreadsheet || !filenameColumn || fields.length === 0) return;
+    if (!template || !spreadsheet || !ready) return;
     try {
       setError('');
       setProgress({
@@ -155,7 +181,7 @@ export function Generator() {
         template,
         rows: spreadsheet.rows,
         fields,
-        filenameColumn,
+        filenamePattern,
         onProgress: (current, total) => {
           setProgress({
             current,
@@ -186,7 +212,7 @@ export function Generator() {
     setFields([]);
     setSelectedFieldId(null);
     setRecordIndex(0);
-    setFilenameColumn('');
+    setFilenamePattern('');
     setPageSize(null);
     setError('');
     setProgress(INITIAL_PROGRESS);
@@ -318,6 +344,17 @@ export function Generator() {
                   </span>
                 </label>
               )}
+              <label className="checkbox-control">
+                <input
+                  type="checkbox"
+                  checked={selectedField.coverOriginal}
+                  onChange={(event) => patchSelectedField({ coverOriginal: event.target.checked })}
+                />
+                <span>
+                  <strong>Cover original PDF content</strong>
+                  <small>Add a white block behind this field using its selected width.</small>
+                </span>
+              </label>
               <label>
                 Font
                 <select value={selectedField.fontFamily} onChange={(event) => patchSelectedField({ fontFamily: event.target.value as PositionedField['fontFamily'] })}>
@@ -348,7 +385,7 @@ export function Generator() {
                 <input type="range" min="0.015" max="0.08" step="0.0025" value={selectedField.fontSizeRatio} onChange={(event) => patchSelectedField({ fontSizeRatio: Number(event.target.value) })} />
               </label>
               <label>
-                Field width
+                Field and cover width
                 <input type="range" min="0.1" max="0.9" step="0.025" value={selectedField.width} onChange={(event) => patchSelectedField({ width: Number(event.target.value) })} />
               </label>
               <label>
@@ -401,21 +438,53 @@ export function Generator() {
             <div className="section-number">3</div>
             <div>
               <h2>Export</h2>
-              <p>Generate one PDF for each row.</p>
+              <p>Generate and name one PDF for each row.</p>
             </div>
           </section>
 
           <label>
-            File-name column
-            <select value={filenameColumn} disabled={!spreadsheet} onChange={(event) => setFilenameColumn(event.target.value)}>
-              {spreadsheet?.headers.map((header) => <option key={header}>{header}</option>)}
-            </select>
+            Output file-name pattern
+            <input
+              className="filename-pattern-input"
+              type="text"
+              value={filenamePattern}
+              maxLength={MAX_FILENAME_TEMPLATE_LENGTH}
+              disabled={!spreadsheet}
+              placeholder="Document - {Certificate Number}"
+              onChange={(event) => setFilenamePattern(normalizeFilenameTemplate(event.target.value))}
+            />
+            <span className="character-count">
+              {filenamePattern.length} / {MAX_FILENAME_TEMPLATE_LENGTH} characters
+            </span>
           </label>
+
+          {spreadsheet ? (
+            <div className="filename-token-section">
+              <span>Insert a changing value</span>
+              <div className="filename-token-list">
+                <button type="button" onClick={() => insertFilenameToken('row')}>{'{row}'}</button>
+                {spreadsheet.headers.map((header) => (
+                  <button type="button" key={header} onClick={() => insertFilenameToken(header)}>
+                    {`{${header}}`}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {filenameError ? <p className="inline-error">{filenameError}</p> : null}
+          {filenamePreview ? (
+            <div className="filename-preview">
+              <span>Preview</span>
+              <strong>{filenamePreview}.pdf</strong>
+            </div>
+          ) : null}
 
           <div className="export-checklist">
             <div className={template ? 'complete' : ''}><span>{template ? '✓' : '1'}</span>PDF template</div>
             <div className={spreadsheet ? 'complete' : ''}><span>{spreadsheet ? '✓' : '2'}</span>Spreadsheet data</div>
             <div className={fields.length ? 'complete' : ''}><span>{fields.length ? '✓' : '3'}</span>At least one field</div>
+            <div className={filenamePattern && !filenameError ? 'complete' : ''}><span>{filenamePattern && !filenameError ? '✓' : '4'}</span>Valid file names</div>
           </div>
 
           <button className="primary-button full-width" type="button" disabled={!ready || progress.stage === 'generating' || progress.stage === 'zipping'} onClick={() => void generate()}>
