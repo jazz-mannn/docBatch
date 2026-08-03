@@ -11,6 +11,7 @@ const baseField: PositionedField = {
   column: 'Recipient',
   contentMode: 'column',
   customText: '',
+  coverOriginal: true,
   x: 0.2,
   y: 0.2,
   width: 0.5,
