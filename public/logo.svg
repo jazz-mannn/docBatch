@@ -1,24 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title description">
   <title id="title">DocBatch</title>
-  <desc id="description">Stacked documents with a purple automation mark</desc>
+  <desc id="description">Two dark document sheets joined by an orange batch line</desc>
   <defs>
-    <linearGradient id="surface" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#1A102F"/>
-      <stop offset="1" stop-color="#050507"/>
+    <linearGradient id="base" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#18110D"/>
+      <stop offset="1" stop-color="#050505"/>
     </linearGradient>
-    <linearGradient id="accent" x1="18" y1="14" x2="48" y2="50" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#C084FC"/>
-      <stop offset="0.48" stop-color="#8B5CF6"/>
-      <stop offset="1" stop-color="#5B21B6"/>
+    <linearGradient id="orange" x1="18" y1="13" x2="50" y2="52" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F19A55"/>
+      <stop offset="0.55" stop-color="#D96A2B"/>
+      <stop offset="1" stop-color="#9E3F14"/>
     </linearGradient>
-    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
-      <feGaussianBlur stdDeviation="2.2" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
   </defs>
-  <rect width="64" height="64" rx="17" fill="url(#surface)"/>
-  <rect x="14" y="16" width="28" height="34" rx="5" fill="#0A0A0F" stroke="#3B2A58" stroke-width="2"/>
-  <rect x="21" y="11" width="29" height="36" rx="5" fill="#111018" stroke="url(#accent)" stroke-width="2.5"/>
-  <path d="M28 22h15M28 28h15M28 34h9" stroke="#E9D5FF" stroke-width="2.4" stroke-linecap="round"/>
-  <path d="M42.5 39.5l3 3 6-7" fill="none" stroke="#C084FC" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+  <rect width="64" height="64" rx="18" fill="url(#base)"/>
+  <path d="M15 19.5A5.5 5.5 0 0 1 20.5 14H39l8 8v24.5A5.5 5.5 0 0 1 41.5 52h-21A5.5 5.5 0 0 1 15 46.5z" fill="#0A0908" stroke="#4A2B1C" stroke-width="2"/>
+  <path d="M22 14.5A4.5 4.5 0 0 1 26.5 10H42l8 8v23.5A4.5 4.5 0 0 1 45.5 46h-19A4.5 4.5 0 0 1 22 41.5z" fill="#15110F" stroke="url(#orange)" stroke-width="2.4"/>
+  <path d="M42 10v9h8" fill="none" stroke="#E48A48" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M29 26h14M29 32h14M29 38h8" stroke="#F4E9E1" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M16 49c10-2 18-2 31 0" stroke="#D96A2B" stroke-width="3" stroke-linecap="round"/>
 </svg>
