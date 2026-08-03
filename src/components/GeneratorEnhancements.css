@@ -1,0 +1,49 @@
+.custom-field-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  border: 1px solid #bfdbfe;
+  border-radius: 9px;
+  background: var(--blue-soft);
+  padding: 10px;
+  color: var(--blue-dark);
+  text-align: left;
+  font-weight: 700;
+}
+
+.custom-field-button:hover:not(:disabled) {
+  border-color: var(--blue);
+}
+
+.custom-field-button:disabled,
+.column-list button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.custom-text-input {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: white;
+  padding: 10px;
+  color: var(--ink);
+  line-height: 1.45;
+}
+
+.custom-text-input:focus {
+  border-color: var(--blue);
+  outline: 3px solid rgba(37, 99, 235, 0.12);
+}
+
+.character-count {
+  align-self: flex-end;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+}
