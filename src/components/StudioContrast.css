@@ -1,0 +1,397 @@
+.studio-shell {
+  --studio-bg: #060504;
+  --studio-panel: #0d0a08;
+  --studio-panel-raised: #15100c;
+  --studio-input: #1a130f;
+  --studio-input-hover: #21160f;
+  --studio-border: #4a3021;
+  --studio-border-strong: #8f4b27;
+  --studio-text: #f7eee8;
+  --studio-text-soft: #d8c9bf;
+  --studio-muted: #b3a49a;
+  --studio-faint: #857970;
+  --studio-orange: #e27735;
+  --studio-orange-bright: #ff9a58;
+}
+
+.studio-shell .studio-heading {
+  margin-bottom: 32px;
+}
+
+.studio-shell .studio-heading h1 {
+  color: var(--studio-text) !important;
+  font-size: clamp(38px, 4vw, 58px);
+  font-weight: 520;
+}
+
+.studio-shell .studio-heading p {
+  max-width: 760px;
+  color: var(--studio-text-soft) !important;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.studio-shell .generator-grid {
+  grid-template-columns: 340px minmax(560px, 1fr) 310px;
+  gap: 18px;
+}
+
+.studio-shell .control-panel,
+.studio-shell .workspace-panel,
+.studio-shell .export-panel {
+  border: 1px solid var(--studio-border) !important;
+  background: var(--studio-panel) !important;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.34) !important;
+}
+
+.studio-shell .control-panel,
+.studio-shell .export-panel {
+  padding: 24px;
+}
+
+.studio-shell .control-section h2,
+.studio-shell .panel-title-row h3,
+.studio-shell .workspace-toolbar strong {
+  color: var(--studio-text) !important;
+  font-size: 16px;
+  font-weight: 620;
+}
+
+.studio-shell .control-section p,
+.studio-shell .panel-title-row > span,
+.studio-shell .control-help,
+.studio-shell .privacy-note,
+.studio-shell .character-count,
+.studio-shell .workspace-toolbar span {
+  color: var(--studio-muted) !important;
+  font-size: 13px !important;
+  line-height: 1.55;
+}
+
+.studio-shell .section-number {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--studio-orange) !important;
+  color: #130904 !important;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.studio-shell .panel-block {
+  border-top: 1px solid #33241b !important;
+}
+
+.studio-shell .file-drop-zone,
+.studio-shell .upload-box,
+.studio-shell .custom-field-button,
+.studio-shell .column-list button,
+.studio-shell .image-upload-button,
+.studio-shell .filename-token-list button,
+.studio-shell select,
+.studio-shell input[type='text'],
+.studio-shell textarea,
+.studio-shell .filename-pattern-input {
+  border: 1px solid var(--studio-border) !important;
+  background: var(--studio-input) !important;
+  color: var(--studio-text) !important;
+  box-shadow: none !important;
+}
+
+.studio-shell .file-drop-zone,
+.studio-shell .upload-box {
+  min-height: 88px;
+  padding: 17px 18px;
+  border-style: dashed !important;
+}
+
+.studio-shell .file-drop-zone .drop-zone-title,
+.studio-shell .file-drop-zone strong,
+.studio-shell .upload-box strong {
+  color: var(--studio-text) !important;
+  font-size: 14px !important;
+  font-weight: 610;
+}
+
+.studio-shell .file-drop-zone span,
+.studio-shell .upload-box span,
+.studio-shell .drop-zone-limit {
+  color: var(--studio-muted) !important;
+  font-size: 12px !important;
+}
+
+.studio-shell .file-drop-zone:hover,
+.studio-shell .file-drop-zone.dragging,
+.studio-shell .upload-box:hover,
+.studio-shell .custom-field-button:hover:not(:disabled),
+.studio-shell .column-list button:hover:not(:disabled),
+.studio-shell .image-upload-button:hover:not(:disabled),
+.studio-shell .filename-token-list button:hover:not(:disabled) {
+  border-color: var(--studio-orange) !important;
+  background: var(--studio-input-hover) !important;
+  color: var(--studio-orange-bright) !important;
+  box-shadow: 0 0 0 3px rgba(226, 119, 53, 0.12) !important;
+}
+
+.studio-shell .custom-field-button,
+.studio-shell .column-list button,
+.studio-shell .image-upload-button {
+  min-height: 48px;
+  padding: 12px 14px;
+  border-radius: 11px;
+  color: var(--studio-text) !important;
+  font-size: 14px;
+  font-weight: 590;
+}
+
+.studio-shell .custom-field-button strong,
+.studio-shell .column-list button strong {
+  color: var(--studio-orange-bright) !important;
+  font-size: 18px;
+}
+
+.studio-shell .image-upload-button small {
+  margin-top: 4px;
+  color: var(--studio-muted) !important;
+  font-size: 12px !important;
+}
+
+.studio-shell .field-properties label,
+.studio-shell .export-panel > label,
+.studio-shell .workspace-toolbar label {
+  color: var(--studio-text-soft) !important;
+  font-size: 13.5px !important;
+  font-weight: 610 !important;
+  line-height: 1.4;
+}
+
+.studio-shell select,
+.studio-shell input[type='text'],
+.studio-shell textarea,
+.studio-shell .filename-pattern-input {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 4px;
+  padding: 0 13px;
+  border-radius: 10px;
+  font-size: 14px !important;
+  line-height: 1.4;
+}
+
+.studio-shell textarea {
+  min-height: 110px;
+  padding: 12px 13px;
+  resize: vertical;
+}
+
+.studio-shell select option {
+  background: #17100c;
+  color: var(--studio-text);
+}
+
+.studio-shell input::placeholder,
+.studio-shell textarea::placeholder {
+  color: #8e8077 !important;
+  opacity: 1;
+}
+
+.studio-shell select:focus,
+.studio-shell input[type='text']:focus,
+.studio-shell textarea:focus,
+.studio-shell .filename-pattern-input:focus {
+  border-color: var(--studio-orange) !important;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(226, 119, 53, 0.16) !important;
+}
+
+.studio-shell input[type='range'] {
+  width: 100%;
+  min-height: 30px;
+  accent-color: var(--studio-orange);
+}
+
+.studio-shell input[type='color'] {
+  width: 100%;
+  min-height: 46px;
+  padding: 5px;
+  border: 1px solid var(--studio-border) !important;
+  border-radius: 10px;
+  background: var(--studio-input) !important;
+}
+
+.studio-shell input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  accent-color: var(--studio-orange);
+}
+
+.studio-shell .checkbox-control {
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--studio-border) !important;
+  border-radius: 11px;
+  background: #120d0a !important;
+}
+
+.studio-shell .checkbox-control strong {
+  color: var(--studio-text) !important;
+  font-size: 14px;
+}
+
+.studio-shell .checkbox-control small {
+  margin-top: 4px;
+  color: var(--studio-muted) !important;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.studio-shell .font-detection-card,
+.studio-shell .filename-preview,
+.studio-shell .selected-image-summary,
+.studio-shell .data-summary div,
+.studio-shell .progress-card {
+  border: 1px solid #3b291f !important;
+  background: #15100c !important;
+  color: var(--studio-text) !important;
+}
+
+.studio-shell .font-detection-card strong,
+.studio-shell .filename-preview strong,
+.studio-shell .selected-image-summary strong,
+.studio-shell .data-summary strong {
+  color: var(--studio-text) !important;
+}
+
+.studio-shell .font-detection-card span,
+.studio-shell .filename-preview span,
+.studio-shell .selected-image-summary span,
+.studio-shell .data-summary span {
+  color: var(--studio-muted) !important;
+  font-size: 12.5px !important;
+}
+
+.studio-shell .workspace-toolbar {
+  min-height: 76px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--studio-border) !important;
+  background: #0b0807 !important;
+}
+
+.studio-shell .workspace-toolbar select {
+  min-width: 230px;
+  margin: 0;
+}
+
+.studio-shell .empty-workspace {
+  min-height: 620px;
+  background: #090706 !important;
+}
+
+.studio-shell .empty-icon {
+  width: 78px;
+  height: 78px;
+  border: 1px solid var(--studio-border);
+  background: #17100c !important;
+  color: var(--studio-orange-bright) !important;
+  font-size: 16px;
+}
+
+.studio-shell .empty-workspace h2 {
+  color: var(--studio-text) !important;
+  font-size: 26px;
+  font-weight: 560;
+}
+
+.studio-shell .empty-workspace p {
+  max-width: 500px;
+  color: var(--studio-muted) !important;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.studio-shell .export-checklist div {
+  color: var(--studio-muted) !important;
+  font-size: 14px;
+}
+
+.studio-shell .export-checklist div.complete {
+  color: var(--studio-text-soft) !important;
+}
+
+.studio-shell .export-checklist span {
+  background: #1c140f !important;
+  color: var(--studio-muted) !important;
+}
+
+.studio-shell .export-checklist div.complete span {
+  background: rgba(226, 119, 53, 0.16) !important;
+  color: var(--studio-orange-bright) !important;
+}
+
+.studio-shell .filename-token-list button {
+  min-height: 38px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  font-size: 12.5px;
+}
+
+.studio-shell .danger-link,
+.studio-shell .explicit-delete {
+  color: #ff8b72 !important;
+  font-size: 13px !important;
+  font-weight: 650;
+}
+
+.studio-shell .primary-button.full-width {
+  min-height: 50px;
+  font-size: 15px;
+  font-weight: 650 !important;
+}
+
+.studio-shell button:disabled,
+.studio-shell input:disabled,
+.studio-shell select:disabled,
+.studio-shell textarea:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed;
+}
+
+.studio-shell .notice-banner,
+.studio-shell .duplicate-banner,
+.studio-shell .error-banner {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+@media (max-width: 1260px) {
+  .studio-shell .generator-grid {
+    grid-template-columns: 320px minmax(500px, 1fr);
+  }
+
+  .studio-shell .export-panel {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 860px) {
+  .studio-shell .generator-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .studio-shell .control-panel,
+  .studio-shell .export-panel {
+    padding: 20px;
+  }
+
+  .studio-shell .workspace-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .studio-shell .workspace-toolbar label,
+  .studio-shell .workspace-toolbar select {
+    width: 100%;
+  }
+}
