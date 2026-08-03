@@ -128,6 +128,6 @@ DocBatch is released under the [MIT License](LICENSE). You may use, copy, modify
 
 Third-party packages remain subject to their own licences. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the main direct dependencies used by this project.
 
-Copyright © 2026 Farai Rashayi.
+Copyright © 2026 Tinashe Rashayi.
 
 See also [SECURITY.md](SECURITY.md), [CONTRIBUTING.md](CONTRIBUTING.md), [deployment documentation](docs/DEPLOYMENT.md), and [architecture documentation](docs/ARCHITECTURE.md).
