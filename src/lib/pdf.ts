@@ -15,6 +15,7 @@ import type {
 import { sanitizeFilename, uniqueFilename } from './filename';
 import { toPdfPlacement } from './coordinates';
 import { resolveFieldText } from './fieldText';
+import { renderFilenameTemplate } from './filenameTemplate';
 
 const MIN_FONT_SIZE = 8;
 
@@ -84,6 +85,18 @@ function drawField(
   const fontSize = fitFontSize(font, value, preferredFontSize, maximumWidth);
   const placement = toPdfPlacement(field, pageWidth, pageHeight, fontSize);
   const textWidth = font.widthOfTextAtSize(value, fontSize);
+  const blockHeight = Math.max(14, fontSize * 1.45);
+  const blockY = Math.max(0, placement.y - fontSize * 0.25);
+
+  if (field.coverOriginal) {
+    page.drawRectangle({
+      x: placement.x,
+      y: blockY,
+      width: placement.maxWidth,
+      height: blockHeight,
+      color: rgb(1, 1, 1),
+    });
+  }
 
   let x = placement.x;
   if (field.alignment === 'center') {
@@ -107,10 +120,10 @@ export async function generatePdfArchive(options: {
   template: File;
   rows: SpreadsheetRow[];
   fields: PositionedField[];
-  filenameColumn: string;
+  filenamePattern: string;
   onProgress: (current: number, total: number) => void;
 }): Promise<Blob> {
-  const { template, rows, fields, filenameColumn, onProgress } = options;
+  const { template, rows, fields, filenamePattern, onProgress } = options;
   const templateBytes = new Uint8Array(await template.arrayBuffer());
   const zip = new JSZip();
   const usedFilenames = new Set<string>();
@@ -133,8 +146,11 @@ export async function generatePdfArchive(options: {
     }
 
     const generated = await document.save({ useObjectStreams: true });
-    const rawName = row[filenameColumn] || `document_${index + 1}`;
-    const safeName = uniqueFilename(sanitizeFilename(rawName, `document_${index + 1}`), usedFilenames);
+    const renderedName = renderFilenameTemplate(filenamePattern, row, index);
+    const safeName = uniqueFilename(
+      sanitizeFilename(renderedName, `document_${index + 1}`),
+      usedFilenames,
+    );
     zip.file(`${safeName}.pdf`, generated);
     onProgress(index + 1, rows.length);
   }
