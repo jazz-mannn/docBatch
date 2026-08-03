@@ -10,6 +10,7 @@ export interface PositionedField {
   column: string;
   contentMode: FieldContentMode;
   customText: string;
+  coverOriginal: boolean;
   x: number;
   y: number;
   width: number;
