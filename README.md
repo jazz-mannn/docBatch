@@ -2,16 +2,21 @@
 
 **Turn one PDF template and one spreadsheet into hundreds of personalized documents.**
 
-DocBatch is a browser-based bulk PDF generator for certificates, letters, invitations, badges, receipts, and similar documents. A user uploads a PDF template and a CSV or Excel file, places spreadsheet fields on the template, previews the result, and downloads the generated PDFs as one ZIP archive.
+DocBatch is a browser-based bulk PDF generator for certificates, letters, invitations, badges, receipts, and similar documents. It is suited to universities, schools, training providers, HR teams, event organizers, nonprofit organizations, and other teams that issue repeated documents from one approved layout.
+
+A user adds a PDF template and a CSV or Excel file, places spreadsheet or custom text fields on the template, previews the result, and downloads the generated PDFs as one ZIP archive.
 
 The current MVP performs all document processing inside the browser. Uploaded files are not sent to an application server.
 
 ## Current MVP
 
-- Upload a PDF template.
-- Upload `.csv`, `.xlsx`, or `.xls` spreadsheet data.
-- Inspect columns and sample records.
-- Add multiple spreadsheet fields to the template.
+- Drag and drop one PDF template, up to 8 MB.
+- Drag and drop one `.csv`, `.xlsx`, or `.xls` spreadsheet, up to 5 MB.
+- Keep no more than two active source files in one browser session.
+- Inspect spreadsheet columns and records.
+- Add spreadsheet-backed fields or editable custom text.
+- Limit custom text to 200 characters per field.
+- Place up to 20 fields on the template.
 - Drag fields into position.
 - Configure font, weight, alignment, colour, and text width.
 - Preview any spreadsheet record.
@@ -21,7 +26,7 @@ The current MVP performs all document processing inside the browser. Uploaded fi
 
 ## Product direction
 
-DocBatch begins as a private, browser-only generator. Planned paid features include saved templates, QR verification, team workspaces, branded email delivery, higher batch limits, API access, and organisation billing.
+DocBatch begins as a private, browser-only generator. Planned paid features include saved templates, QR verification, team workspaces, branded email delivery, higher batch limits, API access, and organization billing.
 
 ## Technology
 
