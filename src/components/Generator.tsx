@@ -8,6 +8,17 @@ import type {
 import { parseSpreadsheet } from '../lib/spreadsheet';
 import { generatePdfArchive } from '../lib/pdf';
 import { downloadBlob } from '../lib/download';
+import {
+  MAX_ACTIVE_FILES,
+  PDF_UPLOAD_POLICY,
+  SPREADSHEET_UPLOAD_POLICY,
+} from '../lib/fileUpload';
+import {
+  MAX_CUSTOM_TEXT_LENGTH,
+  MAX_POSITIONED_FIELDS,
+  normalizeCustomText,
+} from '../lib/fieldText';
+import { FileDropZone } from './FileDropZone';
 import { PdfWorkspace } from './PdfWorkspace';
 
 const INITIAL_PROGRESS: GenerationProgress = {
@@ -17,10 +28,16 @@ const INITIAL_PROGRESS: GenerationProgress = {
   message: '',
 };
 
-function createField(column: string, index: number): PositionedField {
+function createField(
+  column: string,
+  index: number,
+  contentMode: PositionedField['contentMode'] = 'column',
+): PositionedField {
   return {
     id: crypto.randomUUID(),
     column,
+    contentMode,
+    customText: contentMode === 'custom' ? 'Enter text for every document' : '',
     x: 0.25,
     y: Math.min(0.2 + index * 0.08, 0.8),
     width: 0.5,
@@ -46,6 +63,8 @@ export function Generator() {
   const selectedField = fields.find((field) => field.id === selectedFieldId) ?? null;
   const previewRow = spreadsheet?.rows[recordIndex];
   const ready = Boolean(template && spreadsheet && fields.length > 0 && filenameColumn);
+  const activeFileCount = Number(Boolean(template)) + Number(Boolean(spreadsheet));
+  const fieldLimitReached = fields.length >= MAX_POSITIONED_FIELDS;
 
   const updatePageSize = useCallback((size: PdfPageSize) => {
     setPageSize((current) => {
@@ -66,8 +85,7 @@ export function Generator() {
     };
   }, [spreadsheet]);
 
-  async function handleSpreadsheet(file: File | undefined) {
-    if (!file) return;
+  async function handleSpreadsheet(file: File) {
     try {
       setError('');
       const parsed = await parseSpreadsheet(file);
@@ -82,8 +100,7 @@ export function Generator() {
     }
   }
 
-  function handleTemplate(file: File | undefined) {
-    if (!file) return;
+  function handleTemplate(file: File) {
     if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
       setError('The current MVP accepts PDF templates only.');
       return;
@@ -93,8 +110,17 @@ export function Generator() {
     setPageSize(null);
   }
 
-  function addField(column: string) {
-    const next = createField(column, fields.length);
+  function addField(
+    column: string,
+    contentMode: PositionedField['contentMode'] = 'column',
+  ) {
+    if (fieldLimitReached) {
+      setError(`A template can contain up to ${MAX_POSITIONED_FIELDS} positioned fields.`);
+      return;
+    }
+
+    setError('');
+    const next = createField(column, fields.length, contentMode);
     setFields((current) => [...current, next]);
     setSelectedFieldId(next.id);
   }
@@ -172,7 +198,7 @@ export function Generator() {
         <div>
           <div className="eyebrow">Browser-only MVP</div>
           <h1>Create a document batch</h1>
-          <p>Upload files, place spreadsheet fields, preview one record, then export every PDF.</p>
+          <p>Drop files, place spreadsheet or custom text fields, preview one record, then export every PDF.</p>
         </div>
         <button className="text-button" type="button" onClick={reset}>Reset session</button>
       </section>
@@ -185,21 +211,33 @@ export function Generator() {
             <div className="section-number">1</div>
             <div>
               <h2>Files</h2>
-              <p>PDF template and spreadsheet data.</p>
+              <p>One PDF and one spreadsheet. {MAX_ACTIVE_FILES} files maximum per session.</p>
             </div>
           </section>
 
-          <label className="upload-box">
-            <span>PDF template</span>
-            <strong>{template?.name ?? 'Choose a PDF'}</strong>
-            <input type="file" accept="application/pdf,.pdf" onChange={(event) => handleTemplate(event.target.files?.[0])} />
-          </label>
+          <FileDropZone
+            title="PDF template"
+            accept="application/pdf,.pdf"
+            emptyMessage="Drop a PDF here or click to browse"
+            fileName={template?.name}
+            policy={PDF_UPLOAD_POLICY}
+            onFile={handleTemplate}
+            onError={setError}
+          />
 
-          <label className="upload-box">
-            <span>CSV or Excel data</span>
-            <strong>{spreadsheet?.sourceName ?? 'Choose a spreadsheet'}</strong>
-            <input type="file" accept=".csv,.xlsx,.xls" onChange={(event) => void handleSpreadsheet(event.target.files?.[0])} />
-          </label>
+          <FileDropZone
+            title="CSV or Excel data"
+            accept=".csv,.xlsx,.xls"
+            emptyMessage="Drop a spreadsheet here or click to browse"
+            fileName={spreadsheet?.sourceName}
+            policy={SPREADSHEET_UPLOAD_POLICY}
+            onFile={handleSpreadsheet}
+            onError={setError}
+          />
+
+          <p className="privacy-note">
+            {activeFileCount} of {MAX_ACTIVE_FILES} file slots in use. Adding a new file replaces the file in that slot.
+          </p>
 
           {validationSummary ? (
             <div className="data-summary">
@@ -213,11 +251,24 @@ export function Generator() {
             <section className="panel-block">
               <div className="panel-title-row">
                 <h3>Add fields</h3>
-                <span>{fields.length} placed</span>
+                <span>{fields.length} of {MAX_POSITIONED_FIELDS}</span>
               </div>
+              <button
+                className="custom-field-button"
+                type="button"
+                disabled={fieldLimitReached}
+                onClick={() => addField(spreadsheet.headers[0] ?? '', 'custom')}
+              >
+                <span>Custom text</span><strong>+</strong>
+              </button>
               <div className="column-list">
                 {spreadsheet.headers.map((header) => (
-                  <button type="button" key={header} onClick={() => addField(header)}>
+                  <button
+                    type="button"
+                    key={header}
+                    disabled={fieldLimitReached}
+                    onClick={() => addField(header)}
+                  >
                     <span>{header}</span><strong>+</strong>
                   </button>
                 ))}
@@ -232,11 +283,41 @@ export function Generator() {
                 <button className="danger-link" type="button" onClick={removeSelectedField}>Remove</button>
               </div>
               <label>
-                Column
-                <select value={selectedField.column} onChange={(event) => patchSelectedField({ column: event.target.value })}>
-                  {spreadsheet?.headers.map((header) => <option key={header}>{header}</option>)}
+                Text source
+                <select
+                  value={selectedField.contentMode}
+                  onChange={(event) => patchSelectedField({
+                    contentMode: event.target.value as PositionedField['contentMode'],
+                  })}
+                >
+                  <option value="column">Spreadsheet column</option>
+                  <option value="custom">Custom text</option>
                 </select>
               </label>
+              {selectedField.contentMode === 'column' ? (
+                <label>
+                  Column
+                  <select value={selectedField.column} onChange={(event) => patchSelectedField({ column: event.target.value })}>
+                    {spreadsheet?.headers.map((header) => <option key={header}>{header}</option>)}
+                  </select>
+                </label>
+              ) : (
+                <label>
+                  Text for every document
+                  <textarea
+                    className="custom-text-input"
+                    value={selectedField.customText}
+                    maxLength={MAX_CUSTOM_TEXT_LENGTH}
+                    rows={4}
+                    onChange={(event) => patchSelectedField({
+                      customText: normalizeCustomText(event.target.value),
+                    })}
+                  />
+                  <span className="character-count">
+                    {selectedField.customText.length} / {MAX_CUSTOM_TEXT_LENGTH} characters
+                  </span>
+                </label>
+              )}
               <label>
                 Font
                 <select value={selectedField.fontFamily} onChange={(event) => patchSelectedField({ fontFamily: event.target.value as PositionedField['fontFamily'] })}>
@@ -310,7 +391,7 @@ export function Generator() {
             <div className="empty-workspace">
               <div className="empty-icon">PDF</div>
               <h2>Upload a PDF template</h2>
-              <p>The first page will appear here. You can then drag spreadsheet fields onto it.</p>
+              <p>The first page will appear here. You can then drag spreadsheet fields and custom text onto it.</p>
             </div>
           )}
         </section>
