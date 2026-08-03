@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">DocBatch</title>
+  <rect width="64" height="64" rx="16" fill="#111827"/>
+  <path d="M19 13h19l9 9v29H19z" fill="#fff"/>
+  <path d="M38 13v10h9" fill="#dbeafe"/>
+  <path d="M25 31h16M25 37h16M25 43h11" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
+</svg>
