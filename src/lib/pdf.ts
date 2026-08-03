@@ -14,6 +14,7 @@ import type {
 } from '../types';
 import { sanitizeFilename, uniqueFilename } from './filename';
 import { toPdfPlacement } from './coordinates';
+import { resolveFieldText } from './fieldText';
 
 const MIN_FONT_SIZE = 8;
 
@@ -126,7 +127,7 @@ export async function generatePdfArchive(options: {
 
     const fontCache = new Map<string, PDFFont>();
     for (const field of fields) {
-      const value = row[field.column] ?? '';
+      const value = resolveFieldText(field, row);
       const font = await getFont(document, fontCache, field.fontFamily, field.fontWeight);
       drawField(firstPage, field, value, font);
     }
