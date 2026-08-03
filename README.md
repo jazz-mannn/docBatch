@@ -1,5 +1,7 @@
 # DocBatch
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-orange.svg)](LICENSE)
+
 **Create hundreds of personalized PDFs from one template and spreadsheet.**
 
 DocBatch is a deployable web application for bulk document automation. It is designed for universities, schools, training providers, HR teams, event organizers, nonprofit organizations, and other teams that repeatedly issue documents from one approved layout.
@@ -120,6 +122,12 @@ npm run test
 npm run build
 ```
 
-## Repository status
+## License
 
-This repository is private and proprietary. See [LICENSE](LICENSE), [SECURITY.md](SECURITY.md), [deployment documentation](docs/DEPLOYMENT.md), and [architecture documentation](docs/ARCHITECTURE.md).
+DocBatch is released under the [MIT License](LICENSE). You may use, copy, modify, distribute, sublicense, and sell copies of the software subject to the conditions in that licence.
+
+Third-party packages remain subject to their own licences. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the main direct dependencies used by this project.
+
+Copyright © 2026 Farai Rashayi.
+
+See also [SECURITY.md](SECURITY.md), [CONTRIBUTING.md](CONTRIBUTING.md), [deployment documentation](docs/DEPLOYMENT.md), and [architecture documentation](docs/ARCHITECTURE.md).

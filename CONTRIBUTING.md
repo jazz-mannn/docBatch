@@ -1,6 +1,8 @@
 # Contributing
 
-DocBatch is currently a private proprietary project.
+DocBatch is an open-source project released under the MIT License. Contributions are welcome through focused pull requests.
+
+By submitting a contribution, you agree that your contribution will be licensed under the same MIT License that covers the project.
 
 ## Workflow
 
@@ -17,3 +19,4 @@ DocBatch is currently a private proprietary project.
 - Validate every uploaded file before processing.
 - Avoid logging spreadsheet records or document contents.
 - Add tests for reusable calculations and filename handling.
+- Do not remove third-party copyright or licence notices.
