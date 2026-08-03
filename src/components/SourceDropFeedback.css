@@ -1,0 +1,33 @@
+.studio-shell .file-drop-zone.dragging {
+  border-color: #ff9a58 !important;
+  background: #28170f !important;
+  box-shadow: 0 0 0 3px rgba(255, 154, 88, 0.16) !important;
+  transform: translateY(-1px);
+}
+
+.studio-shell .file-drop-zone.dragging strong {
+  color: #fff4ec !important;
+}
+
+.studio-shell .drop-zone-feedback {
+  display: block;
+  margin-top: 10px;
+  color: #55e39c !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  line-height: 1.45;
+}
+
+.studio-shell .drop-zone-feedback::before {
+  color: #43e694 !important;
+  text-shadow: 0 0 10px rgba(67, 230, 148, 0.35);
+}
+
+.studio-shell .drop-zone-feedback.error {
+  color: #ff9b87 !important;
+}
+
+.studio-shell .drop-zone-feedback.error::before {
+  color: #ff765f !important;
+  text-shadow: none;
+}
