@@ -24,10 +24,9 @@
   opacity: 0.45;
 }
 
-.custom-text-input {
+.custom-text-input,
+.filename-pattern-input {
   width: 100%;
-  min-height: 96px;
-  resize: vertical;
   border: 1px solid var(--line);
   border-radius: 9px;
   background: white;
@@ -36,7 +35,13 @@
   line-height: 1.45;
 }
 
-.custom-text-input:focus {
+.custom-text-input {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.custom-text-input:focus,
+.filename-pattern-input:focus {
   border-color: var(--blue);
   outline: 3px solid rgba(37, 99, 235, 0.12);
 }
@@ -46,4 +51,110 @@
   color: var(--muted);
   font-size: 11px;
   font-weight: 500;
+}
+
+.checkbox-control {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: flex-start;
+  gap: 10px !important;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fbfcfd;
+}
+
+.checkbox-control input {
+  width: 17px;
+  height: 17px;
+  margin: 2px 0 0;
+  accent-color: var(--blue);
+}
+
+.checkbox-control span,
+.checkbox-control strong,
+.checkbox-control small {
+  display: block;
+}
+
+.checkbox-control strong {
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.checkbox-control small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.positioned-field.cover-original {
+  background: #ffffff;
+}
+
+.filename-token-section {
+  margin-top: 14px;
+}
+
+.filename-token-section > span {
+  color: #475467;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.filename-token-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 130px;
+  margin-top: 8px;
+  overflow: auto;
+}
+
+.filename-token-list button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  padding: 6px 8px;
+  color: #344054;
+  font-size: 11px;
+}
+
+.filename-token-list button:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.filename-preview {
+  margin-top: 12px;
+  padding: 11px;
+  border-radius: 9px;
+  background: var(--soft);
+}
+
+.filename-preview span,
+.filename-preview strong {
+  display: block;
+}
+
+.filename-preview span {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.filename-preview strong {
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.inline-error {
+  margin: 8px 0 0;
+  color: var(--danger);
+  font-size: 11px;
+  line-height: 1.4;
 }
