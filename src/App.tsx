@@ -26,7 +26,7 @@ function App() {
         ? <Landing onStart={() => setView('generator')} />
         : <GeneratorStudio />}
       <footer className="site-footer">
-        <span>© 2026 DocBatch</span>
+        <span>© 2026 Farai Rashayi · Released under the MIT License</span>
         <span>Bulk PDF document automation, directly in your browser.</span>
       </footer>
       <Tutorial
