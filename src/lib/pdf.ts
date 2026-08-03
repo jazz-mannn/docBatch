@@ -4,16 +4,19 @@ import {
   StandardFonts,
   rgb,
   type PDFFont,
+  type PDFImage,
   type PDFPage,
 } from 'pdf-lib';
 import type {
   FontFamily,
+  FontStyle,
   FontWeight,
   PositionedField,
+  PositionedImage,
   SpreadsheetRow,
 } from '../types';
 import { sanitizeFilename, uniqueFilename } from './filename';
-import { toPdfPlacement } from './coordinates';
+import { toPdfImagePlacement, toPdfPlacement } from './coordinates';
 import { resolveFieldText } from './fieldText';
 import { renderFilenameTemplate } from './filenameTemplate';
 
@@ -36,16 +39,29 @@ function parseHexColor(hex: string): { red: number; green: number; blue: number 
   };
 }
 
-function resolveStandardFont(family: FontFamily, weight: FontWeight): StandardFonts {
+function resolveStandardFont(
+  family: FontFamily,
+  weight: FontWeight,
+  style: FontStyle,
+): StandardFonts {
   if (family === 'Times Roman') {
-    return weight === 'bold' ? StandardFonts.TimesRomanBold : StandardFonts.TimesRoman;
+    if (weight === 'bold' && style === 'italic') return StandardFonts.TimesRomanBoldItalic;
+    if (weight === 'bold') return StandardFonts.TimesRomanBold;
+    if (style === 'italic') return StandardFonts.TimesRomanItalic;
+    return StandardFonts.TimesRoman;
   }
 
   if (family === 'Courier') {
-    return weight === 'bold' ? StandardFonts.CourierBold : StandardFonts.Courier;
+    if (weight === 'bold' && style === 'italic') return StandardFonts.CourierBoldOblique;
+    if (weight === 'bold') return StandardFonts.CourierBold;
+    if (style === 'italic') return StandardFonts.CourierOblique;
+    return StandardFonts.Courier;
   }
 
-  return weight === 'bold' ? StandardFonts.HelveticaBold : StandardFonts.Helvetica;
+  if (weight === 'bold' && style === 'italic') return StandardFonts.HelveticaBoldOblique;
+  if (weight === 'bold') return StandardFonts.HelveticaBold;
+  if (style === 'italic') return StandardFonts.HelveticaOblique;
+  return StandardFonts.Helvetica;
 }
 
 async function getFont(
@@ -53,14 +69,13 @@ async function getFont(
   cache: Map<string, PDFFont>,
   family: FontFamily,
   weight: FontWeight,
+  style: FontStyle,
 ): Promise<PDFFont> {
-  const key = `${family}-${weight}`;
+  const key = `${family}-${weight}-${style}`;
   const cached = cache.get(key);
-  if (cached) {
-    return cached;
-  }
+  if (cached) return cached;
 
-  const embedded = await document.embedFont(resolveStandardFont(family, weight));
+  const embedded = await document.embedFont(resolveStandardFont(family, weight, style));
   cache.set(key, embedded);
   return embedded;
 }
@@ -116,14 +131,62 @@ function drawField(
   });
 }
 
+function dataUrlToBytes(dataUrl: string): Uint8Array {
+  const separator = dataUrl.indexOf(',');
+  if (separator < 0) throw new Error('An uploaded image has an invalid data URL.');
+  const binary = atob(dataUrl.slice(separator + 1));
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
+}
+
+async function embedPlacedImage(
+  document: PDFDocument,
+  image: PositionedImage,
+): Promise<PDFImage> {
+  const bytes = dataUrlToBytes(image.asset.dataUrl);
+  return image.asset.mimeType === 'image/png'
+    ? document.embedPng(bytes)
+    : document.embedJpg(bytes);
+}
+
+async function drawPlacedImage(
+  document: PDFDocument,
+  page: PDFPage,
+  image: PositionedImage,
+): Promise<void> {
+  const { width: pageWidth, height: pageHeight } = page.getSize();
+  const placement = toPdfImagePlacement(image, pageWidth, pageHeight);
+
+  if (image.coverOriginal) {
+    page.drawRectangle({
+      ...placement,
+      color: rgb(1, 1, 1),
+    });
+  }
+
+  const embedded = await embedPlacedImage(document, image);
+  page.drawImage(embedded, placement);
+}
+
 export async function generatePdfArchive(options: {
   template: File;
   rows: SpreadsheetRow[];
   fields: PositionedField[];
+  images: PositionedImage[];
   filenamePattern: string;
   onProgress: (current: number, total: number) => void;
 }): Promise<Blob> {
-  const { template, rows, fields, filenamePattern, onProgress } = options;
+  const {
+    template,
+    rows,
+    fields,
+    images,
+    filenamePattern,
+    onProgress,
+  } = options;
   const templateBytes = new Uint8Array(await template.arrayBuffer());
   const zip = new JSZip();
   const usedFilenames = new Set<string>();
@@ -141,8 +204,18 @@ export async function generatePdfArchive(options: {
     const fontCache = new Map<string, PDFFont>();
     for (const field of fields) {
       const value = resolveFieldText(field, row);
-      const font = await getFont(document, fontCache, field.fontFamily, field.fontWeight);
+      const font = await getFont(
+        document,
+        fontCache,
+        field.fontFamily,
+        field.fontWeight,
+        field.fontStyle,
+      );
       drawField(firstPage, field, value, font);
+    }
+
+    for (const image of images) {
+      await drawPlacedImage(document, firstPage, image);
     }
 
     const generated = await document.save({ useObjectStreams: true });

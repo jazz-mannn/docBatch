@@ -1,8 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
 import type {
+  DetectedPdfText,
   GenerationProgress,
+  ImageRole,
   PdfPageSize,
   PositionedField,
+  PositionedImage,
   SpreadsheetData,
 } from '../types';
 import { parseSpreadsheet } from '../lib/spreadsheet';
@@ -25,7 +28,16 @@ import {
   renderFilenameTemplate,
   validateFilenameTemplate,
 } from '../lib/filenameTemplate';
+import {
+  MAX_IMAGE_ELEMENTS,
+  MAX_IMAGES_PER_ROLE,
+  createImageAsset,
+  createPositionedImage,
+  validateImageCount,
+} from '../lib/imageAsset';
+import { fieldFromDetectedText } from '../lib/detectedText';
 import { FileDropZone } from './FileDropZone';
+import { ImageUploadButton } from './ImageUploadButton';
 import { PdfWorkspace } from './PdfWorkspace';
 
 const INITIAL_PROGRESS: GenerationProgress = {
@@ -35,23 +47,33 @@ const INITIAL_PROGRESS: GenerationProgress = {
   message: '',
 };
 
+function fieldIdentity(field: PositionedField): string {
+  return field.contentMode === 'custom'
+    ? `custom:${field.customText.trim().toLowerCase()}`
+    : `column:${field.column.trim().toLowerCase()}`;
+}
+
 function createField(
   column: string,
   index: number,
+  duplicateIndex: number,
   contentMode: PositionedField['contentMode'] = 'column',
 ): PositionedField {
+  const baseY = Math.min(0.18 + index * 0.06, 0.78);
+
   return {
     id: crypto.randomUUID(),
     column,
     contentMode,
     customText: contentMode === 'custom' ? 'Enter text for every document' : '',
     coverOriginal: true,
-    x: 0.25,
-    y: Math.min(0.2 + index * 0.08, 0.8),
+    x: Math.min(0.25 + duplicateIndex * 0.018, 0.72),
+    y: Math.min(baseY + duplicateIndex * 0.016, 0.9),
     width: 0.5,
     fontSizeRatio: 0.035,
     fontFamily: 'Helvetica',
     fontWeight: 'regular',
+    fontStyle: 'normal',
     alignment: 'center',
     color: '#111827',
   };
@@ -61,17 +83,25 @@ export function Generator() {
   const [template, setTemplate] = useState<File | null>(null);
   const [spreadsheet, setSpreadsheet] = useState<SpreadsheetData | null>(null);
   const [fields, setFields] = useState<PositionedField[]>([]);
+  const [images, setImages] = useState<PositionedImage[]>([]);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+  const [detectedText, setDetectedText] = useState<DetectedPdfText[]>([]);
+  const [textSelectionMode, setTextSelectionMode] = useState(false);
   const [recordIndex, setRecordIndex] = useState(0);
   const [filenamePattern, setFilenamePattern] = useState('');
   const [pageSize, setPageSize] = useState<PdfPageSize | null>(null);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [progress, setProgress] = useState<GenerationProgress>(INITIAL_PROGRESS);
 
   const selectedField = fields.find((field) => field.id === selectedFieldId) ?? null;
+  const selectedImage = images.find((image) => image.id === selectedImageId) ?? null;
   const previewRow = spreadsheet?.rows[recordIndex];
   const activeFileCount = Number(Boolean(template)) + Number(Boolean(spreadsheet));
   const fieldLimitReached = fields.length >= MAX_POSITIONED_FIELDS;
+  const imageLimitReached = images.length >= MAX_IMAGE_ELEMENTS;
+  const elementCount = fields.length + images.length;
   const filenameError = spreadsheet
     ? validateFilenameTemplate(filenamePattern, spreadsheet.headers)
     : null;
@@ -81,16 +111,30 @@ export function Generator() {
   const ready = Boolean(
     template
     && spreadsheet
-    && fields.length > 0
+    && elementCount > 0
     && filenamePattern.trim()
     && !filenameError,
   );
+
+  const duplicateCount = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const field of fields) {
+      const key = fieldIdentity(field);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return [...counts.values()].filter((count) => count > 1).reduce((sum, count) => sum + count, 0);
+  }, [fields]);
 
   const updatePageSize = useCallback((size: PdfPageSize) => {
     setPageSize((current) => {
       if (current?.width === size.width && current.height === size.height) return current;
       return size;
     });
+  }, []);
+
+  const updateDetectedText = useCallback((items: DetectedPdfText[]) => {
+    setDetectedText(items);
+    if (items.length > 0) setTextSelectionMode(true);
   }, []);
 
   const validationSummary = useMemo(() => {
@@ -108,6 +152,7 @@ export function Generator() {
   async function handleSpreadsheet(file: File) {
     try {
       setError('');
+      setNotice('');
       const parsed = await parseSpreadsheet(file);
       const firstHeader = parsed.headers[0] ?? 'row';
       setSpreadsheet(parsed);
@@ -128,8 +173,11 @@ export function Generator() {
       return;
     }
     setError('');
+    setNotice('');
     setTemplate(file);
     setPageSize(null);
+    setDetectedText([]);
+    setTextSelectionMode(false);
   }
 
   function addField(
@@ -137,18 +185,75 @@ export function Generator() {
     contentMode: PositionedField['contentMode'] = 'column',
   ) {
     if (fieldLimitReached) {
-      setError(`A template can contain up to ${MAX_POSITIONED_FIELDS} positioned fields.`);
+      setError(`A template can contain up to ${MAX_POSITIONED_FIELDS} positioned text fields.`);
       return;
     }
 
+    const identity = contentMode === 'custom'
+      ? 'custom:enter text for every document'
+      : `column:${column.trim().toLowerCase()}`;
+    const existingDuplicates = fields.filter((field) => fieldIdentity(field) === identity).length;
+    const next = createField(column, fields.length, existingDuplicates, contentMode);
+
     setError('');
-    const next = createField(column, fields.length, contentMode);
+    setNotice(existingDuplicates > 0
+      ? `${contentMode === 'custom' ? 'Custom text' : column} was added again. Duplicate fields are translucent and labelled in the preview.`
+      : '');
     setFields((current) => [...current, next]);
     setSelectedFieldId(next.id);
+    setSelectedImageId(null);
+  }
+
+  function addDetectedField(item: DetectedPdfText) {
+    if (fieldLimitReached) {
+      setError(`A template can contain up to ${MAX_POSITIONED_FIELDS} positioned text fields.`);
+      return;
+    }
+
+    const next = fieldFromDetectedText(item);
+    setError('');
+    setNotice(`Selected original text: “${item.text.slice(0, 60)}”. Edit it in Field settings.`);
+    setFields((current) => [...current, next]);
+    setSelectedFieldId(next.id);
+    setSelectedImageId(null);
+  }
+
+  async function addImage(file: File, role: ImageRole) {
+    const countError = validateImageCount(images, role);
+    if (countError) {
+      setError(countError);
+      return;
+    }
+
+    try {
+      setError('');
+      const asset = await createImageAsset(file, role);
+      const next = createPositionedImage(asset, pageSize, images.length);
+      setImages((current) => [...current, next]);
+      setSelectedImageId(next.id);
+      setSelectedFieldId(null);
+      setNotice(`${role === 'signature' ? 'Signature' : 'Logo'} added. Drag it into place or drag it to the bin to delete it.`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : `Unable to add the ${role}.`);
+    }
   }
 
   function changeField(updated: PositionedField) {
     setFields((current) => current.map((field) => field.id === updated.id ? updated : field));
+  }
+
+  function changeImage(updated: PositionedImage) {
+    setImages((current) => current.map((image) => image.id === updated.id ? updated : image));
+  }
+
+  function selectField(fieldId: string) {
+    setSelectedFieldId(fieldId);
+    setSelectedImageId(null);
+  }
+
+  function selectImage(imageId: string) {
+    setSelectedImageId(imageId);
+    setSelectedFieldId(null);
   }
 
   function patchSelectedField(patch: Partial<PositionedField>) {
@@ -156,10 +261,21 @@ export function Generator() {
     changeField({ ...selectedField, ...patch });
   }
 
-  function removeSelectedField() {
-    if (!selectedFieldId) return;
-    setFields((current) => current.filter((field) => field.id !== selectedFieldId));
-    setSelectedFieldId(null);
+  function patchSelectedImage(patch: Partial<PositionedImage>) {
+    if (!selectedImage) return;
+    changeImage({ ...selectedImage, ...patch });
+  }
+
+  function deleteField(fieldId: string) {
+    setFields((current) => current.filter((field) => field.id !== fieldId));
+    if (selectedFieldId === fieldId) setSelectedFieldId(null);
+    setNotice('Text field deleted.');
+  }
+
+  function deleteImage(imageId: string) {
+    setImages((current) => current.filter((image) => image.id !== imageId));
+    if (selectedImageId === imageId) setSelectedImageId(null);
+    setNotice('Image deleted.');
   }
 
   function insertFilenameToken(token: string) {
@@ -170,6 +286,7 @@ export function Generator() {
     if (!template || !spreadsheet || !ready) return;
     try {
       setError('');
+      setNotice('');
       setProgress({
         current: 0,
         total: spreadsheet.rows.length,
@@ -181,6 +298,7 @@ export function Generator() {
         template,
         rows: spreadsheet.rows,
         fields,
+        images,
         filenamePattern,
         onProgress: (current, total) => {
           setProgress({
@@ -210,11 +328,16 @@ export function Generator() {
     setTemplate(null);
     setSpreadsheet(null);
     setFields([]);
+    setImages([]);
     setSelectedFieldId(null);
+    setSelectedImageId(null);
+    setDetectedText([]);
+    setTextSelectionMode(false);
     setRecordIndex(0);
     setFilenamePattern('');
     setPageSize(null);
     setError('');
+    setNotice('');
     setProgress(INITIAL_PROGRESS);
   }
 
@@ -224,12 +347,18 @@ export function Generator() {
         <div>
           <div className="eyebrow">Browser-only MVP</div>
           <h1>Create a document batch</h1>
-          <p>Drop files, place spreadsheet or custom text fields, preview one record, then export every PDF.</p>
+          <p>Replace detected PDF text, add spreadsheet fields, signatures, and logos, then export every PDF.</p>
         </div>
         <button className="text-button" type="button" onClick={reset}>Reset session</button>
       </section>
 
       {error ? <div className="error-banner" role="alert">{error}</div> : null}
+      {notice ? <div className="notice-banner" role="status">{notice}</div> : null}
+      {duplicateCount > 0 ? (
+        <div className="duplicate-banner" role="status">
+          {duplicateCount} overlapping or repeated text fields are shown translucently and labelled “Duplicate”.
+        </div>
+      ) : null}
 
       <div className="generator-grid">
         <aside className="control-panel">
@@ -237,7 +366,7 @@ export function Generator() {
             <div className="section-number">1</div>
             <div>
               <h2>Files</h2>
-              <p>One PDF and one spreadsheet. {MAX_ACTIVE_FILES} files maximum per session.</p>
+              <p>One PDF and one spreadsheet. {MAX_ACTIVE_FILES} source files maximum per session.</p>
             </div>
           </section>
 
@@ -262,7 +391,7 @@ export function Generator() {
           />
 
           <p className="privacy-note">
-            {activeFileCount} of {MAX_ACTIVE_FILES} file slots in use. Adding a new file replaces the file in that slot.
+            {activeFileCount} of {MAX_ACTIVE_FILES} source-file slots in use. Adding a new source file replaces that slot.
           </p>
 
           {validationSummary ? (
@@ -273,40 +402,79 @@ export function Generator() {
             </div>
           ) : null}
 
-          {spreadsheet ? (
+          {template ? (
             <section className="panel-block">
               <div className="panel-title-row">
-                <h3>Add fields</h3>
-                <span>{fields.length} of {MAX_POSITIONED_FIELDS}</span>
+                <h3>Add content</h3>
+                <span>{fields.length} text · {images.length} images</span>
               </div>
+
+              <button
+                className={`detected-text-button ${textSelectionMode ? 'active' : ''}`}
+                type="button"
+                disabled={detectedText.length === 0 || fieldLimitReached}
+                onClick={() => setTextSelectionMode((current) => !current)}
+              >
+                <span>{textSelectionMode ? 'Selecting original PDF text' : 'Select original PDF text'}</span>
+                <strong>{detectedText.length}</strong>
+              </button>
+              <p className="control-help">
+                {detectedText.length > 0
+                  ? 'Click highlighted PDF text to create a replacement field using the nearest standard PDF font.'
+                  : 'No selectable text was found. Scanned image-only PDFs require manual fields.'}
+              </p>
+
               <button
                 className="custom-field-button"
                 type="button"
                 disabled={fieldLimitReached}
-                onClick={() => addField(spreadsheet.headers[0] ?? '', 'custom')}
+                onClick={() => addField(spreadsheet?.headers[0] ?? '', 'custom')}
               >
                 <span>Custom text</span><strong>+</strong>
               </button>
-              <div className="column-list">
-                {spreadsheet.headers.map((header) => (
-                  <button
-                    type="button"
-                    key={header}
-                    disabled={fieldLimitReached}
-                    onClick={() => addField(header)}
-                  >
-                    <span>{header}</span><strong>+</strong>
-                  </button>
-                ))}
+
+              {spreadsheet ? (
+                <div className="column-list">
+                  {spreadsheet.headers.map((header) => (
+                    <button
+                      type="button"
+                      key={header}
+                      disabled={fieldLimitReached}
+                      onClick={() => addField(header)}
+                    >
+                      <span>{header}</span><strong>+</strong>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
+              <div className="image-upload-grid">
+                <ImageUploadButton
+                  role="signature"
+                  disabled={imageLimitReached || images.filter((image) => image.asset.role === 'signature').length >= MAX_IMAGES_PER_ROLE}
+                  onFile={addImage}
+                  onError={setError}
+                />
+                <ImageUploadButton
+                  role="logo"
+                  disabled={imageLimitReached || images.filter((image) => image.asset.role === 'logo').length >= MAX_IMAGES_PER_ROLE}
+                  onFile={addImage}
+                  onError={setError}
+                />
               </div>
+              <p className="control-help">
+                Up to {MAX_IMAGE_ELEMENTS} images total and {MAX_IMAGES_PER_ROLE} per type. Transparent PNG works best for signatures and logos.
+              </p>
             </section>
           ) : null}
 
           {selectedField ? (
             <section className="panel-block field-properties">
               <div className="panel-title-row">
-                <h3>Field settings</h3>
-                <button className="danger-link" type="button" onClick={removeSelectedField}>Remove</button>
+                <h3>Text field settings</h3>
+                <button className="danger-link explicit-delete" type="button" onClick={() => deleteField(selectedField.id)}>
+                  Delete selected field
+                </button>
               </div>
               <label>
                 Text source
@@ -356,11 +524,11 @@ export function Generator() {
                 </span>
               </label>
               <label>
-                Font
+                Font family
                 <select value={selectedField.fontFamily} onChange={(event) => patchSelectedField({ fontFamily: event.target.value as PositionedField['fontFamily'] })}>
-                  <option>Helvetica</option>
-                  <option>Times Roman</option>
-                  <option>Courier</option>
+                  <option value="Helvetica">Helvetica</option>
+                  <option value="Times Roman">Times Roman</option>
+                  <option value="Courier">Courier</option>
                 </select>
               </label>
               <div className="two-column-controls">
@@ -372,26 +540,71 @@ export function Generator() {
                   </select>
                 </label>
                 <label>
-                  Align
-                  <select value={selectedField.alignment} onChange={(event) => patchSelectedField({ alignment: event.target.value as PositionedField['alignment'] })}>
-                    <option value="left">Left</option>
-                    <option value="center">Centre</option>
-                    <option value="right">Right</option>
+                  Style
+                  <select value={selectedField.fontStyle} onChange={(event) => patchSelectedField({ fontStyle: event.target.value as PositionedField['fontStyle'] })}>
+                    <option value="normal">Normal</option>
+                    <option value="italic">Italic or oblique</option>
                   </select>
                 </label>
               </div>
+              <label>
+                Alignment
+                <select value={selectedField.alignment} onChange={(event) => patchSelectedField({ alignment: event.target.value as PositionedField['alignment'] })}>
+                  <option value="left">Left</option>
+                  <option value="center">Centre</option>
+                  <option value="right">Right</option>
+                </select>
+              </label>
               <label>
                 Text size
                 <input type="range" min="0.015" max="0.08" step="0.0025" value={selectedField.fontSizeRatio} onChange={(event) => patchSelectedField({ fontSizeRatio: Number(event.target.value) })} />
               </label>
               <label>
                 Field and cover width
-                <input type="range" min="0.1" max="0.9" step="0.025" value={selectedField.width} onChange={(event) => patchSelectedField({ width: Number(event.target.value) })} />
+                <input type="range" min="0.08" max="0.9" step="0.025" value={selectedField.width} onChange={(event) => patchSelectedField({ width: Number(event.target.value) })} />
               </label>
               <label>
                 Text colour
                 <input type="color" value={selectedField.color} onChange={(event) => patchSelectedField({ color: event.target.value })} />
               </label>
+            </section>
+          ) : null}
+
+          {selectedImage ? (
+            <section className="panel-block field-properties">
+              <div className="panel-title-row">
+                <h3>{selectedImage.asset.role === 'signature' ? 'Signature' : 'Logo'} settings</h3>
+                <button className="danger-link explicit-delete" type="button" onClick={() => deleteImage(selectedImage.id)}>
+                  Delete selected image
+                </button>
+              </div>
+              <div className="selected-image-summary">
+                <img src={selectedImage.asset.dataUrl} alt="Selected upload preview" />
+                <div>
+                  <strong>{selectedImage.asset.name}</strong>
+                  <span>{selectedImage.asset.pixelWidth} × {selectedImage.asset.pixelHeight} px</span>
+                </div>
+              </div>
+              <label className="checkbox-control">
+                <input
+                  type="checkbox"
+                  checked={selectedImage.coverOriginal}
+                  onChange={(event) => patchSelectedImage({ coverOriginal: event.target.checked })}
+                />
+                <span>
+                  <strong>Cover original PDF content</strong>
+                  <small>Add a white block behind the entire image area.</small>
+                </span>
+              </label>
+              <label>
+                Image width
+                <input type="range" min="0.05" max="0.6" step="0.01" value={selectedImage.width} onChange={(event) => patchSelectedImage({ width: Number(event.target.value) })} />
+              </label>
+              <label>
+                Image height
+                <input type="range" min="0.03" max="0.4" step="0.01" value={selectedImage.height} onChange={(event) => patchSelectedImage({ height: Number(event.target.value) })} />
+              </label>
+              <p className="control-help">Drag the image on the document. Drag it over the red bin and release to delete it.</p>
             </section>
           ) : null}
         </aside>
@@ -402,33 +615,53 @@ export function Generator() {
               <strong>Document preview</strong>
               <span>{pageSize ? `${Math.round(pageSize.width)} × ${Math.round(pageSize.height)} pt` : 'Upload a template'}</span>
             </div>
-            {spreadsheet ? (
-              <label>
-                Preview record
-                <select value={recordIndex} onChange={(event) => setRecordIndex(Number(event.target.value))}>
-                  {spreadsheet.rows.map((row, index) => (
-                    <option key={index} value={index}>{index + 1}. {row[spreadsheet.headers[0]] || 'Unnamed record'}</option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
+            <div className="workspace-toolbar-actions">
+              {detectedText.length > 0 ? (
+                <button
+                  className={textSelectionMode ? 'active' : ''}
+                  type="button"
+                  onClick={() => setTextSelectionMode((current) => !current)}
+                >
+                  {textSelectionMode ? 'Finish text selection' : `Select PDF text (${detectedText.length})`}
+                </button>
+              ) : null}
+              {spreadsheet ? (
+                <label>
+                  Preview record
+                  <select value={recordIndex} onChange={(event) => setRecordIndex(Number(event.target.value))}>
+                    {spreadsheet.rows.map((row, index) => (
+                      <option key={index} value={index}>{index + 1}. {row[spreadsheet.headers[0]] || 'Unnamed record'}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+            </div>
           </div>
 
           {template ? (
             <PdfWorkspace
               template={template}
               fields={fields}
+              images={images}
               row={previewRow}
               selectedFieldId={selectedFieldId}
-              onSelectField={setSelectedFieldId}
+              selectedImageId={selectedImageId}
+              textSelectionMode={textSelectionMode}
+              onSelectField={selectField}
+              onSelectImage={selectImage}
               onChangeField={changeField}
+              onChangeImage={changeImage}
+              onDeleteField={deleteField}
+              onDeleteImage={deleteImage}
+              onCreateFieldFromDetected={addDetectedField}
+              onDetectedText={updateDetectedText}
               onPageSize={updatePageSize}
             />
           ) : (
             <div className="empty-workspace">
               <div className="empty-icon">PDF</div>
               <h2>Upload a PDF template</h2>
-              <p>The first page will appear here. You can then drag spreadsheet fields and custom text onto it.</p>
+              <p>The first page will appear here. You can select existing text or add text, signatures, and logos.</p>
             </div>
           )}
         </section>
@@ -483,7 +716,7 @@ export function Generator() {
           <div className="export-checklist">
             <div className={template ? 'complete' : ''}><span>{template ? '✓' : '1'}</span>PDF template</div>
             <div className={spreadsheet ? 'complete' : ''}><span>{spreadsheet ? '✓' : '2'}</span>Spreadsheet data</div>
-            <div className={fields.length ? 'complete' : ''}><span>{fields.length ? '✓' : '3'}</span>At least one field</div>
+            <div className={elementCount ? 'complete' : ''}><span>{elementCount ? '✓' : '3'}</span>At least one text or image element</div>
             <div className={filenamePattern && !filenameError ? 'complete' : ''}><span>{filenamePattern && !filenameError ? '✓' : '4'}</span>Valid file names</div>
           </div>
 
@@ -498,7 +731,7 @@ export function Generator() {
             </div>
           ) : null}
 
-          <p className="privacy-note">Files are processed locally in this browser session.</p>
+          <p className="privacy-note">Source files and images are processed locally in this browser session.</p>
         </aside>
       </div>
     </main>
