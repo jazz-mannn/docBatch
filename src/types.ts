@@ -7,6 +7,13 @@ export type TextAlignment = 'left' | 'center' | 'right';
 export type FieldContentMode = 'column' | 'custom';
 export type ImageRole = 'signature' | 'logo';
 
+export interface DetectedFontDefaults {
+  fontFamily: FontFamily;
+  fontWeight: FontWeight;
+  fontStyle: FontStyle;
+  fontSizeRatio: number;
+}
+
 export interface PositionedField {
   id: string;
   column: string;
