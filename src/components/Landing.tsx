@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 interface LandingProps {
   onStart: () => void;
 }
@@ -5,11 +7,32 @@ interface LandingProps {
 const steps = [
   ['1', 'Upload a template', 'Choose the PDF that will be personalized.'],
   ['2', 'Add spreadsheet data', 'Use CSV or Excel with one row per document.'],
-  ['3', 'Place fields', 'Drag names, dates, numbers, and other columns onto the page.'],
+  ['3', 'Place and edit fields', 'Drag spreadsheet values or custom text onto the page.'],
   ['4', 'Export the batch', 'Download every generated PDF inside one ZIP file.'],
 ];
 
+const audiences = [
+  ['Universities and schools', 'Generate certificates, admission letters, result notices, student confirmations, and event documents.'],
+  ['Training providers', 'Produce course certificates, attendance records, completion letters, and participant badges.'],
+  ['HR and operations teams', 'Prepare employee letters, onboarding packs, internal notices, and repeated forms.'],
+  ['Events and organizations', 'Create invitations, passes, membership documents, acknowledgements, and branded credentials.'],
+];
+
+function createSyntheticCredential() {
+  const values = new Uint16Array(2);
+  crypto.getRandomValues(values);
+  const recipientCode = `R-${String(values[0] % 10000).padStart(4, '0')}`;
+  const credentialCode = `DB-${(values[1] % 0xffff).toString(16).toUpperCase().padStart(4, '0')}`;
+
+  return {
+    recipient: `Recipient ${recipientCode}`,
+    credential: credentialCode,
+  };
+}
+
 export function Landing({ onStart }: LandingProps) {
+  const syntheticCredential = useMemo(createSyntheticCredential, []);
+
   return (
     <main>
       <section className="hero section-shell">
@@ -20,7 +43,6 @@ export function Landing({ onStart }: LandingProps) {
         </p>
         <div className="hero-actions">
           <button className="primary-button" type="button" onClick={onStart}>Create a batch</button>
-          <a className="secondary-button" href="/sample-data.csv" download>Download sample CSV</a>
         </div>
         <div className="trust-row" aria-label="Product characteristics">
           <span>Local processing</span>
@@ -30,26 +52,42 @@ export function Landing({ onStart }: LandingProps) {
         </div>
       </section>
 
-      <section className="section-shell product-preview" aria-label="Product preview">
+      <section className="section-shell product-preview" aria-label="Synthetic product preview">
         <div className="preview-sidebar">
           <span className="preview-step active">1. Files</span>
           <span className="preview-step active">2. Fields</span>
           <span className="preview-step">3. Export</span>
         </div>
         <div className="preview-document">
-          <div className="document-mark">CERTIFICATE</div>
-          <p>This certificate is presented to</p>
-          <strong>Alex Morgan</strong>
-          <p>for completing Document Automation</p>
+          <div className="document-mark">CREDENTIAL</div>
+          <p>This credential is issued to</p>
+          <strong>{syntheticCredential.recipient}</strong>
+          <p>for completing Batch Automation Fundamentals</p>
           <div className="preview-line" />
         </div>
         <div className="preview-data">
-          <span>Name</span>
-          <strong>Alex Morgan</strong>
-          <span>Course</span>
-          <strong>Document Automation</strong>
-          <span>Date</span>
-          <strong>3 August 2026</strong>
+          <span>Recipient</span>
+          <strong>{syntheticCredential.recipient}</strong>
+          <span>Programme</span>
+          <strong>Batch Automation Fundamentals</strong>
+          <span>Credential ID</span>
+          <strong>{syntheticCredential.credential}</strong>
+        </div>
+      </section>
+
+      <section className="section-shell audience-section">
+        <div className="audience-heading">
+          <div className="eyebrow">Useful across repeated document workflows</div>
+          <h2>Designed for institutions and teams that generate documents at scale.</h2>
+          <p>DocBatch is especially useful where one approved layout must be issued to many recipients with different details.</p>
+        </div>
+        <div className="audience-grid">
+          {audiences.map(([title, description]) => (
+            <article className="audience-card" key={title}>
+              <h3>{title}</h3>
+              <p>{description}</p>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -82,7 +120,7 @@ export function Landing({ onStart }: LandingProps) {
 
       <section className="section-shell final-cta">
         <h2>Generate the first batch.</h2>
-        <p>Use a PDF template and a spreadsheet containing up to 500 records.</p>
+        <p>Use one PDF template and one spreadsheet containing up to 500 records.</p>
         <button className="primary-button" type="button" onClick={onStart}>Open DocBatch</button>
       </section>
     </main>
