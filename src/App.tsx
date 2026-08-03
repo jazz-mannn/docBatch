@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Analytics } from '@vercel/analytics/react';
-import { Generator } from './components/Generator';
+import { GeneratorStudio } from './components/GeneratorStudio';
 import { Header } from './components/Header';
 import { Landing } from './components/Landing';
 import { Tutorial } from './components/Tutorial';
@@ -22,10 +22,12 @@ function App() {
         onNavigate={setView}
         onOpenTutorial={() => setTutorialOpen(true)}
       />
-      {view === 'home' ? <Landing onStart={() => setView('generator')} /> : <Generator />}
+      {view === 'home'
+        ? <Landing onStart={() => setView('generator')} />
+        : <GeneratorStudio />}
       <footer className="site-footer">
         <span>© 2026 DocBatch</span>
-        <span>Private browser-based document automation.</span>
+        <span>Bulk PDF document automation, directly in your browser.</span>
       </footer>
       <Tutorial
         open={tutorialOpen}

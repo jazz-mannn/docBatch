@@ -9,44 +9,44 @@ interface TutorialProps {
 
 const tutorialSteps = [
   {
-    title: 'Add the two source files',
-    body: 'Drop one PDF template and one CSV or Excel spreadsheet. The app accepts two active source files per session, with separate size limits for performance.',
-    points: ['PDF template: one file, up to 8 MB', 'Spreadsheet: one file, up to 5 MB', 'Spreadsheet batches: up to 500 rows'],
+    title: 'Add your source files',
+    body: 'Start with one PDF template and one CSV or Excel spreadsheet. Each spreadsheet row becomes one generated document.',
+    points: ['PDF template: one file, up to 8 MB', 'Spreadsheet: one file, up to 5 MB', 'Up to 500 spreadsheet rows per batch'],
   },
   {
-    title: 'Select text already in the PDF',
-    body: 'For text-based PDFs, DocBatch detects the original text automatically. Turn on Select PDF text, then click the original text that you want to replace.',
-    points: ['The selected text becomes an editable custom field', 'Position, size, and the nearest standard PDF font are selected automatically', 'Scanned image-only PDFs require manual fields'],
+    title: 'Let DocBatch match the font',
+    body: 'DocBatch silently analyses the embedded text styles in the PDF and chooses the nearest compatible standard PDF font for new fields.',
+    points: ['The original PDF text is not selected or converted', 'New fields inherit the detected family, weight, style, and size', 'You can change every text setting manually'],
   },
   {
-    title: 'Add spreadsheet and custom text fields',
-    body: 'Add a spreadsheet column for changing row data, or add custom text that should appear on every generated document.',
-    points: ['Up to 20 positioned text fields', 'Custom text limited to 200 characters per field', 'Repeated fields are translucent and labelled Duplicate'],
+    title: 'Add dynamic and reusable text',
+    body: 'Choose a spreadsheet column for values that change in every row, or add custom text that remains the same throughout the batch.',
+    points: ['Up to 20 positioned text fields', 'Custom text is limited to 200 characters per field', 'Repeated fields are translucent and clearly labelled in the editor'],
   },
   {
-    title: 'Replace, move, or delete fields',
-    body: 'White cover blocks hide the original PDF content before new text is drawn. Drag any element to reposition it. While dragging, move it over the red bin and release to delete it.',
-    points: ['The Delete selected field button remains available', 'Adjust the field and cover width together', 'The final exported field is opaque even though the editor preview is translucent'],
+    title: 'Replace, move, or delete content',
+    body: 'White cover blocks can hide existing PDF content before a new field is drawn. Drag any element to reposition it or move it onto the delete zone.',
+    points: ['Delete buttons remain available in the settings panel', 'Adjust field width and cover width together', 'Editor transparency does not affect the exported PDF'],
   },
   {
     title: 'Add signatures and logos',
-    body: 'Upload transparent PNG or JPEG images and position them on the document. Signatures and logos are included in every generated PDF.',
+    body: 'Upload transparent PNG or JPEG images and place them anywhere on the template. Each image appears in every generated PDF.',
     points: ['2 MB maximum per image', '4096 × 4096 pixels maximum', 'Up to four images total and two per image type'],
   },
   {
-    title: 'Choose professional PDF fonts',
-    body: 'Use Helvetica, Times Roman, or Courier with regular, bold, italic, and bold italic variants. These are standard PDF fonts and do not require external font files.',
-    points: ['Detected text selects the nearest family and style', 'Change alignment, text size, colour, and cover width', 'Long values shrink to fit the selected field width'],
+    title: 'Choose a professional PDF font',
+    body: 'Use Times Roman, Helvetica, or Courier with regular, bold, normal, and italic variations.',
+    points: ['Times Roman for classic certificates', 'Helvetica for modern professional documents', 'Courier for formal monospaced layouts'],
   },
   {
-    title: 'Build the output file names',
-    body: 'Use ordinary text together with spreadsheet tokens. Each token is replaced with the value from that row.',
-    points: ['Example: Document Automation - {Certificate Number}', 'Use {row} for a numbered sequence', 'Duplicate names receive safe numeric suffixes'],
+    title: 'Control every output filename',
+    body: 'Combine fixed text with spreadsheet tokens so each PDF receives a useful, row-specific filename.',
+    points: ['Example: Certificate - {Certificate Number}', 'Use {row} for a numbered sequence', 'Duplicate names receive safe numeric suffixes'],
   },
   {
-    title: 'Preview and export',
-    body: 'Switch between spreadsheet records to check placement. When ready, generate all PDFs and download one ZIP archive.',
-    points: ['Files remain in the browser session', 'No uploaded document or image is stored by the app', 'Reset the session to clear the current files and elements'],
+    title: 'Review and generate',
+    body: 'Switch between spreadsheet records to verify placement, then generate the batch and download one ZIP archive.',
+    points: ['Files remain inside the browser session', 'No document content is stored by DocBatch', 'Start over to clear the current working session'],
   },
 ];
 
@@ -112,7 +112,7 @@ export function Tutorial({ open, onClose, onOpenGenerator }: TutorialProps) {
                 onOpenGenerator();
               }}
             >
-              Start a batch
+              Open DocBatch Studio
             </button>
           ) : (
             <button

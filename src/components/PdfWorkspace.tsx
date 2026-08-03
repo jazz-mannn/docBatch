@@ -8,6 +8,7 @@ import {
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import type {
+  DetectedFontDefaults,
   DetectedPdfText,
   PdfPageSize,
   PositionedField,
@@ -16,7 +17,11 @@ import type {
 } from '../types';
 import { moveField, moveImage } from '../lib/coordinates';
 import { resolveFieldText } from '../lib/fieldText';
-import { inferStandardFont, limitDetectedText } from '../lib/detectedText';
+import {
+  detectDominantFont,
+  inferStandardFont,
+  limitDetectedText,
+} from '../lib/detectedText';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
@@ -27,16 +32,17 @@ interface PdfWorkspaceProps {
   row: SpreadsheetRow | undefined;
   selectedFieldId: string | null;
   selectedImageId: string | null;
-  textSelectionMode: boolean;
   onSelectField: (fieldId: string) => void;
   onSelectImage: (imageId: string) => void;
   onChangeField: (field: PositionedField) => void;
   onChangeImage: (image: PositionedImage) => void;
   onDeleteField: (fieldId: string) => void;
   onDeleteImage: (imageId: string) => void;
-  onCreateFieldFromDetected: (item: DetectedPdfText) => void;
-  onDetectedText: (items: DetectedPdfText[]) => void;
   onPageSize: (size: PdfPageSize) => void;
+  onDetectedFontDefaults?: (defaults: DetectedFontDefaults | null) => void;
+  textSelectionMode?: boolean;
+  onCreateFieldFromDetected?: (item: DetectedPdfText) => void;
+  onDetectedText?: (items: DetectedPdfText[]) => void;
 }
 
 interface DragState {
@@ -58,23 +64,21 @@ export function PdfWorkspace({
   row,
   selectedFieldId,
   selectedImageId,
-  textSelectionMode,
   onSelectField,
   onSelectImage,
   onChangeField,
   onChangeImage,
   onDeleteField,
   onDeleteImage,
-  onCreateFieldFromDetected,
-  onDetectedText,
   onPageSize,
+  onDetectedFontDefaults,
+  onDetectedText,
 }: PdfWorkspaceProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const trashRef = useRef<HTMLDivElement>(null);
   const [stageWidth, setStageWidth] = useState(700);
   const [renderError, setRenderError] = useState('');
-  const [detectedText, setDetectedText] = useState<DetectedPdfText[]>([]);
   const [dragging, setDragging] = useState<DragState | null>(null);
   const [overTrash, setOverTrash] = useState(false);
 
@@ -151,8 +155,8 @@ export function PdfWorkspace({
         }));
 
         if (!cancelled) {
-          setDetectedText(extracted);
-          onDetectedText(extracted);
+          onDetectedFontDefaults?.(detectDominantFont(extracted));
+          onDetectedText?.([]);
         }
 
         const desiredWidth = Math.min(1000, Math.max(600, window.innerWidth * 0.7));
@@ -175,8 +179,8 @@ export function PdfWorkspace({
         }).promise;
       } catch (error) {
         if (!cancelled) {
-          setDetectedText([]);
-          onDetectedText([]);
+          onDetectedFontDefaults?.(null);
+          onDetectedText?.([]);
           setRenderError(error instanceof Error ? error.message : 'Unable to preview this PDF.');
         }
       }
@@ -187,7 +191,7 @@ export function PdfWorkspace({
       cancelled = true;
       void loadingTask?.destroy();
     };
-  }, [template, onDetectedText, onPageSize]);
+  }, [template, onDetectedFontDefaults, onDetectedText, onPageSize]);
 
   function isInsideTrash(clientX: number, clientY: number): boolean {
     const rectangle = trashRef.current?.getBoundingClientRect();
@@ -281,28 +285,6 @@ export function PdfWorkspace({
       <div className="pdf-stage" ref={stageRef}>
         <canvas ref={canvasRef} aria-label="PDF template preview" />
 
-        {textSelectionMode ? (
-          <div className="detected-text-layer" aria-label="Detected PDF text">
-            {detectedText.map((item) => (
-              <button
-                key={item.id}
-                className="detected-text-target"
-                type="button"
-                style={{
-                  left: `${item.x * 100}%`,
-                  top: `${item.y * 100}%`,
-                  width: `${item.width * 100}%`,
-                  fontSize: `${Math.max(9, item.fontSizeRatio * stageWidth)}px`,
-                }}
-                title={`Use detected text: ${item.text}`}
-                onClick={() => onCreateFieldFromDetected(item)}
-              >
-                {item.text}
-              </button>
-            ))}
-          </div>
-        ) : null}
-
         <div className="field-layer">
           {fields.map((field) => {
             const resolvedText = resolveFieldText(field, row);
@@ -366,7 +348,7 @@ export function PdfWorkspace({
         aria-live="polite"
       >
         <strong>{overTrash ? 'Release to delete' : 'Drag here to delete'}</strong>
-        <span>{dragging ? `Deleting ${dragging.label}` : 'The Remove button remains available in settings.'}</span>
+        <span>{dragging ? `Deleting ${dragging.label}` : 'The delete button remains available in settings.'}</span>
       </div>
     </div>
   );

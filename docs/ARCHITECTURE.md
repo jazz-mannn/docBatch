@@ -2,16 +2,16 @@
 
 ## Objective
 
-DocBatch converts one PDF template and one spreadsheet into a ZIP archive containing one personalized PDF per spreadsheet row.
+DocBatch is a static web application that converts one PDF template and one spreadsheet into a ZIP archive containing one personalized PDF per spreadsheet row.
 
-## MVP boundary
+## Current production boundary
 
-The first release is a static single-page application. It has no application server, database, cloud document storage, customer account system, or payment integration.
+The deployed website has no application server, customer database, cloud document storage, account system, or payment integration. Document processing occurs in the browser.
 
 ## Data flow
 
 ```text
-PDF template ─> PDF.js preview ─> selectable text extraction ─> positioned replacement fields
+PDF template ─> PDF.js preview ─> embedded-font analysis ─> default field style
       │
       └────────> browser memory ─> pdf-lib ─> generated PDFs ─> JSZip ─> download
 
@@ -24,16 +24,16 @@ Page navigation ─> Vercel Web Analytics when enabled by the deployer
 
 ## Components
 
-- `Landing`: product explanation, institutional use cases, and synthetic preview credentials.
-- `Generator`: upload state, validation, editor element controls, filename patterns, and export orchestration.
+- `Landing`: public product explanation, use cases, and synthetic preview credentials.
+- `GeneratorStudio`: source-file state, validation, editor controls, silent font defaults, filename patterns, and export orchestration.
 - `FileDropZone`: drag-and-drop source input with count, extension, and size validation.
-- `ImageUploadButton`: compact signature and logo input.
-- `PdfWorkspace`: PDF.js rendering, selectable-text regions, normalized positioning, duplicate visibility, and drag-to-delete behavior.
+- `ImageUploadButton`: signature and logo input.
+- `PdfWorkspace`: PDF.js rendering, normalized positioning, duplicate visibility, image placement, and drag-to-delete behavior.
 - `Tutorial`: reusable first-visit workflow guide.
 - `spreadsheet.ts`: file validation and spreadsheet normalization.
 - `fileUpload.ts`: source-file policies and size limits.
 - `imageAsset.ts`: PNG and JPEG validation, image limits, dimensions, and initial placement.
-- `detectedText.ts`: font approximation and detected-text conversion into editable fields.
+- `detectedText.ts`: embedded-font approximation and dominant-style selection.
 - `fieldText.ts`: spreadsheet and custom text resolution.
 - `filenameTemplate.ts`: token validation and row-specific output names.
 - `pdf.ts`: PDF cloning, white cover blocks, standard font embedding, image embedding, field drawing, and ZIP creation.
@@ -41,17 +41,17 @@ Page navigation ─> Vercel Web Analytics when enabled by the deployer
 - `coordinates.ts`: normalized browser-to-PDF coordinate conversion for text and images.
 - `onboarding.ts`: local tutorial completion state.
 
-## PDF text detection
+## Silent PDF font detection
 
-The first page is processed through `PDFPageProxy.getTextContent()`. Each selectable text item is converted into normalized browser coordinates.
+The first page is processed through `PDFPageProxy.getTextContent()`. Text items are analysed only to estimate the dominant embedded style.
 
-The detector records:
+For each usable text item, DocBatch derives:
 
-- original text;
-- horizontal and vertical position;
-- approximate width;
+- an approximate standard font family;
+- regular or bold weight;
+- normal or italic style;
 - approximate font size;
-- PDF font name and family hints.
+- a score weighted by the amount of text using that style.
 
 The original font is mapped to the nearest standard PDF family:
 
@@ -61,9 +61,9 @@ serif -> Times Roman
 monospaced -> Courier
 ```
 
-Bold and italic or oblique hints are preserved. This creates 12 supported standard variants without external font files.
+The highest-scoring style becomes the default for newly added text fields. The original PDF text is never rendered as an interactive selection layer and is not converted into an editable object.
 
-Image-only or scanned PDFs do not expose text items. The interface reports that manual fields are required instead of attempting browser OCR.
+Image-only or scanned PDFs do not expose usable text items. In that case, DocBatch uses the standard Helvetica fallback without interrupting the workflow.
 
 ## Coordinate and cover model
 
@@ -78,13 +78,13 @@ height = image height / preview height
 
 During export, normalized values are converted into PDF points. PDF coordinates start at the bottom-left, while browser coordinates start at the top-left, so the vertical axis is inverted.
 
-When `coverOriginal` is enabled, pdf-lib draws a white rectangle before drawing the text or image. The source template file remains unchanged.
+When `coverOriginal` is enabled, pdf-lib draws a white rectangle before drawing the text or image. The source template remains unchanged.
 
 ## Duplicate and deletion model
 
-Repeated text elements are detected by their spreadsheet column or custom text identity. Duplicate fields are translucent and labelled in the editor preview. Exported content remains fully opaque.
+Repeated text elements are detected by spreadsheet-column or custom-text identity. Duplicate fields are translucent and labelled in the editor preview. Exported content remains fully opaque.
 
-While an element is being dragged, a fixed deletion target appears. Releasing the pointer over that target removes the element. The settings panel retains an explicit delete button as an accessible alternative.
+While an element is being dragged, a deletion target appears. Releasing the pointer over that target removes the element. The settings panel retains an explicit delete button as an accessible alternative.
 
 ## Image model
 
@@ -105,7 +105,7 @@ Transparent PNG is preferred for signatures and logos. pdf-lib embeds each image
 Filename patterns contain literal text and tokens:
 
 ```text
-Document Automation - {Certificate Number} - {row}
+Certificate - {Certificate Number} - {row}
 ```
 
 Spreadsheet tokens resolve case-insensitively against the header row. `{row}` resolves to a one-based sequence number. The final value is sanitized and duplicate names receive suffixes before insertion into the ZIP archive.
@@ -120,26 +120,27 @@ Spreadsheet tokens resolve case-insensitively against the header row. `{row}` re
 - Maximum 200 characters per custom text field.
 - Maximum four positioned images.
 - Maximum 120 characters in a filename pattern.
-- Maximum 250 detected text regions rendered for selection.
+- Maximum 250 text items considered during font analysis.
 
 ## Security and privacy
 
 - Uploaded files and images remain in browser memory.
-- No document content is logged or sent to the analytics component.
+- No document content is logged or sent to analytics.
 - No remote code execution or server-side document parsing occurs.
 - Output filenames are sanitized before ZIP insertion.
-- File, row, field, image, and text-detection limits protect browser memory.
-- Tutorial completion stores one boolean-like value in local browser storage.
-- Vercel Web Analytics is injected for aggregate website traffic only after the project owner enables it in Vercel.
+- File, row, field, image, and font-analysis limits protect browser memory.
+- Tutorial completion stores one small value in local browser storage.
+- Vercel Web Analytics measures aggregate website traffic only after the project owner enables it.
 
-## Planned hosted architecture
+## Future hosted services
 
-Paid features may introduce:
+Commercial features may introduce:
 
-- Supabase or equivalent authentication and PostgreSQL storage;
+- authentication and organization accounts;
 - server-side payment webhooks;
-- saved element templates containing coordinates, not source documents by default;
+- saved element templates containing coordinates, without source documents by default;
 - certificate verification records containing document IDs and status;
-- short-lived encrypted object storage for optional email delivery.
+- short-lived encrypted object storage for optional email delivery;
+- team workspaces and role-based access.
 
-These features should remain separated from the local document-processing engine.
+These hosted services should remain separated from the browser document-processing engine.

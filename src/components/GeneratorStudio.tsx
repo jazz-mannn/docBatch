@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import type {
-  DetectedPdfText,
+  DetectedFontDefaults,
   GenerationProgress,
   ImageRole,
   PdfPageSize,
@@ -35,7 +35,7 @@ import {
   createPositionedImage,
   validateImageCount,
 } from '../lib/imageAsset';
-import { fieldFromDetectedText } from '../lib/detectedText';
+import { FALLBACK_FONT_DEFAULTS } from '../lib/detectedText';
 import { FileDropZone } from './FileDropZone';
 import { ImageUploadButton } from './ImageUploadButton';
 import { PdfWorkspace } from './PdfWorkspace';
@@ -57,7 +57,8 @@ function createField(
   column: string,
   index: number,
   duplicateIndex: number,
-  contentMode: PositionedField['contentMode'] = 'column',
+  contentMode: PositionedField['contentMode'],
+  defaults: DetectedFontDefaults,
 ): PositionedField {
   const baseY = Math.min(0.18 + index * 0.06, 0.78);
 
@@ -70,24 +71,30 @@ function createField(
     x: Math.min(0.25 + duplicateIndex * 0.018, 0.72),
     y: Math.min(baseY + duplicateIndex * 0.016, 0.9),
     width: 0.5,
-    fontSizeRatio: 0.035,
-    fontFamily: 'Helvetica',
-    fontWeight: 'regular',
-    fontStyle: 'normal',
+    fontSizeRatio: Math.min(0.08, Math.max(0.015, defaults.fontSizeRatio)),
+    fontFamily: defaults.fontFamily,
+    fontWeight: defaults.fontWeight,
+    fontStyle: defaults.fontStyle,
     alignment: 'center',
     color: '#111827',
   };
 }
 
-export function Generator() {
+function describeFont(defaults: DetectedFontDefaults): string {
+  const weight = defaults.fontWeight === 'bold' ? 'Bold' : 'Regular';
+  const style = defaults.fontStyle === 'italic' ? 'Italic' : 'Normal';
+  return `${defaults.fontFamily} · ${weight} · ${style}`;
+}
+
+export function GeneratorStudio() {
   const [template, setTemplate] = useState<File | null>(null);
   const [spreadsheet, setSpreadsheet] = useState<SpreadsheetData | null>(null);
   const [fields, setFields] = useState<PositionedField[]>([]);
   const [images, setImages] = useState<PositionedImage[]>([]);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
-  const [detectedText, setDetectedText] = useState<DetectedPdfText[]>([]);
-  const [textSelectionMode, setTextSelectionMode] = useState(false);
+  const [fontDefaults, setFontDefaults] = useState<DetectedFontDefaults>(FALLBACK_FONT_DEFAULTS);
+  const [fontDetected, setFontDetected] = useState(false);
   const [recordIndex, setRecordIndex] = useState(0);
   const [filenamePattern, setFilenamePattern] = useState('');
   const [pageSize, setPageSize] = useState<PdfPageSize | null>(null);
@@ -122,20 +129,10 @@ export function Generator() {
       const key = fieldIdentity(field);
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }
-    return [...counts.values()].filter((count) => count > 1).reduce((sum, count) => sum + count, 0);
+    return [...counts.values()]
+      .filter((count) => count > 1)
+      .reduce((sum, count) => sum + count, 0);
   }, [fields]);
-
-  const updatePageSize = useCallback((size: PdfPageSize) => {
-    setPageSize((current) => {
-      if (current?.width === size.width && current.height === size.height) return current;
-      return size;
-    });
-  }, []);
-
-  const updateDetectedText = useCallback((items: DetectedPdfText[]) => {
-    setDetectedText(items);
-    if (items.length > 0) setTextSelectionMode(true);
-  }, []);
 
   const validationSummary = useMemo(() => {
     if (!spreadsheet) return null;
@@ -148,6 +145,18 @@ export function Generator() {
       blankCells,
     };
   }, [spreadsheet]);
+
+  const updatePageSize = useCallback((size: PdfPageSize) => {
+    setPageSize((current) => {
+      if (current?.width === size.width && current.height === size.height) return current;
+      return size;
+    });
+  }, []);
+
+  const updateDetectedFontDefaults = useCallback((defaults: DetectedFontDefaults | null) => {
+    setFontDefaults(defaults ?? FALLBACK_FONT_DEFAULTS);
+    setFontDetected(Boolean(defaults));
+  }, []);
 
   async function handleSpreadsheet(file: File) {
     try {
@@ -169,15 +178,16 @@ export function Generator() {
 
   function handleTemplate(file: File) {
     if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-      setError('The current MVP accepts PDF templates only.');
+      setError('Use a PDF file as the document template.');
       return;
     }
+
     setError('');
     setNotice('');
     setTemplate(file);
     setPageSize(null);
-    setDetectedText([]);
-    setTextSelectionMode(false);
+    setFontDefaults(FALLBACK_FONT_DEFAULTS);
+    setFontDetected(false);
   }
 
   function addField(
@@ -193,26 +203,18 @@ export function Generator() {
       ? 'custom:enter text for every document'
       : `column:${column.trim().toLowerCase()}`;
     const existingDuplicates = fields.filter((field) => fieldIdentity(field) === identity).length;
-    const next = createField(column, fields.length, existingDuplicates, contentMode);
+    const next = createField(
+      column,
+      fields.length,
+      existingDuplicates,
+      contentMode,
+      fontDefaults,
+    );
 
     setError('');
     setNotice(existingDuplicates > 0
-      ? `${contentMode === 'custom' ? 'Custom text' : column} was added again. Duplicate fields are translucent and labelled in the preview.`
+      ? `${contentMode === 'custom' ? 'Custom text' : column} was added again. Duplicate fields are translucent and labelled in the editor.`
       : '');
-    setFields((current) => [...current, next]);
-    setSelectedFieldId(next.id);
-    setSelectedImageId(null);
-  }
-
-  function addDetectedField(item: DetectedPdfText) {
-    if (fieldLimitReached) {
-      setError(`A template can contain up to ${MAX_POSITIONED_FIELDS} positioned text fields.`);
-      return;
-    }
-
-    const next = fieldFromDetectedText(item);
-    setError('');
-    setNotice(`Selected original text: “${item.text.slice(0, 60)}”. Edit it in Field settings.`);
     setFields((current) => [...current, next]);
     setSelectedFieldId(next.id);
     setSelectedImageId(null);
@@ -232,7 +234,7 @@ export function Generator() {
       setImages((current) => [...current, next]);
       setSelectedImageId(next.id);
       setSelectedFieldId(null);
-      setNotice(`${role === 'signature' ? 'Signature' : 'Logo'} added. Drag it into place or drag it to the bin to delete it.`);
+      setNotice(`${role === 'signature' ? 'Signature' : 'Logo'} added. Drag it into position or move it to the delete zone.`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : `Unable to add the ${role}.`);
     }
@@ -284,6 +286,7 @@ export function Generator() {
 
   async function generate() {
     if (!template || !spreadsheet || !ready) return;
+
     try {
       setError('');
       setNotice('');
@@ -305,7 +308,9 @@ export function Generator() {
             current,
             total,
             stage: current === total ? 'zipping' : 'generating',
-            message: current === total ? 'Compressing the ZIP archive…' : `Generating document ${current} of ${total}…`,
+            message: current === total
+              ? 'Compressing the ZIP archive…'
+              : `Generating document ${current} of ${total}…`,
           });
         },
       });
@@ -315,7 +320,7 @@ export function Generator() {
         current: spreadsheet.rows.length,
         total: spreadsheet.rows.length,
         stage: 'complete',
-        message: 'The ZIP archive has been downloaded.',
+        message: 'Your ZIP archive has been downloaded.',
       });
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'Document generation failed.';
@@ -331,8 +336,8 @@ export function Generator() {
     setImages([]);
     setSelectedFieldId(null);
     setSelectedImageId(null);
-    setDetectedText([]);
-    setTextSelectionMode(false);
+    setFontDefaults(FALLBACK_FONT_DEFAULTS);
+    setFontDetected(false);
     setRecordIndex(0);
     setFilenamePattern('');
     setPageSize(null);
@@ -342,21 +347,21 @@ export function Generator() {
   }
 
   return (
-    <main className="generator-shell">
-      <section className="generator-heading">
+    <main className="generator-shell studio-shell">
+      <section className="generator-heading studio-heading">
         <div>
-          <div className="eyebrow">Browser-only MVP</div>
-          <h1>Create a document batch</h1>
-          <p>Replace detected PDF text, add spreadsheet fields, signatures, and logos, then export every PDF.</p>
+          <div className="eyebrow">Document automation studio</div>
+          <h1>Build your PDF batch</h1>
+          <p>Combine one approved PDF template with spreadsheet data, branded images, and reusable text.</p>
         </div>
-        <button className="text-button" type="button" onClick={reset}>Reset session</button>
+        <button className="text-button" type="button" onClick={reset}>Start over</button>
       </section>
 
       {error ? <div className="error-banner" role="alert">{error}</div> : null}
       {notice ? <div className="notice-banner" role="status">{notice}</div> : null}
       {duplicateCount > 0 ? (
         <div className="duplicate-banner" role="status">
-          {duplicateCount} overlapping or repeated text fields are shown translucently and labelled “Duplicate”.
+          {duplicateCount} repeated fields are translucent and labelled “Duplicate” in the editor. They remain fully opaque in exported PDFs.
         </div>
       ) : null}
 
@@ -365,15 +370,15 @@ export function Generator() {
           <section className="control-section">
             <div className="section-number">1</div>
             <div>
-              <h2>Files</h2>
-              <p>One PDF and one spreadsheet. {MAX_ACTIVE_FILES} source files maximum per session.</p>
+              <h2>Source files</h2>
+              <p>Add one PDF template and one spreadsheet.</p>
             </div>
           </section>
 
           <FileDropZone
             title="PDF template"
             accept="application/pdf,.pdf"
-            emptyMessage="Drop a PDF here or click to browse"
+            emptyMessage="Drop a PDF here or browse"
             fileName={template?.name}
             policy={PDF_UPLOAD_POLICY}
             onFile={handleTemplate}
@@ -383,7 +388,7 @@ export function Generator() {
           <FileDropZone
             title="CSV or Excel data"
             accept=".csv,.xlsx,.xls"
-            emptyMessage="Drop a spreadsheet here or click to browse"
+            emptyMessage="Drop a spreadsheet here or browse"
             fileName={spreadsheet?.sourceName}
             policy={SPREADSHEET_UPLOAD_POLICY}
             onFile={handleSpreadsheet}
@@ -391,7 +396,7 @@ export function Generator() {
           />
 
           <p className="privacy-note">
-            {activeFileCount} of {MAX_ACTIVE_FILES} source-file slots in use. Adding a new source file replaces that slot.
+            {activeFileCount} of {MAX_ACTIVE_FILES} source-file slots in use. Replacing a file updates that slot.
           </p>
 
           {validationSummary ? (
@@ -405,24 +410,27 @@ export function Generator() {
           {template ? (
             <section className="panel-block">
               <div className="panel-title-row">
+                <h3>Default text style</h3>
+                <span>{fontDetected ? 'Detected' : 'Standard'}</span>
+              </div>
+              <div className={`font-detection-card ${fontDetected ? 'detected' : ''}`}>
+                <strong>{describeFont(fontDefaults)}</strong>
+                <span>
+                  {fontDetected
+                    ? 'New fields inherit the dominant font detected in this PDF.'
+                    : 'No embedded font was detected, so new fields use a compatible standard PDF font.'}
+                </span>
+              </div>
+              <p className="control-help">The PDF text itself is never selected or converted into an editable field.</p>
+            </section>
+          ) : null}
+
+          {template ? (
+            <section className="panel-block">
+              <div className="panel-title-row">
                 <h3>Add content</h3>
                 <span>{fields.length} text · {images.length} images</span>
               </div>
-
-              <button
-                className={`detected-text-button ${textSelectionMode ? 'active' : ''}`}
-                type="button"
-                disabled={detectedText.length === 0 || fieldLimitReached}
-                onClick={() => setTextSelectionMode((current) => !current)}
-              >
-                <span>{textSelectionMode ? 'Selecting original PDF text' : 'Select original PDF text'}</span>
-                <strong>{detectedText.length}</strong>
-              </button>
-              <p className="control-help">
-                {detectedText.length > 0
-                  ? 'Click highlighted PDF text to create a replacement field using the nearest standard PDF font.'
-                  : 'No selectable text was found. Scanned image-only PDFs require manual fields.'}
-              </p>
 
               <button
                 className="custom-field-button"
@@ -446,7 +454,9 @@ export function Generator() {
                     </button>
                   ))}
                 </div>
-              ) : null}
+              ) : (
+                <p className="control-help">Add a spreadsheet to create row-specific text fields.</p>
+              )}
 
               <div className="image-upload-grid">
                 <ImageUploadButton
@@ -463,7 +473,7 @@ export function Generator() {
                 />
               </div>
               <p className="control-help">
-                Up to {MAX_IMAGE_ELEMENTS} images total and {MAX_IMAGES_PER_ROLE} per type. Transparent PNG works best for signatures and logos.
+                Up to {MAX_IMAGE_ELEMENTS} images total and {MAX_IMAGES_PER_ROLE} per type. Transparent PNG files work best.
               </p>
             </section>
           ) : null}
@@ -473,9 +483,10 @@ export function Generator() {
               <div className="panel-title-row">
                 <h3>Text field settings</h3>
                 <button className="danger-link explicit-delete" type="button" onClick={() => deleteField(selectedField.id)}>
-                  Delete selected field
+                  Delete field
                 </button>
               </div>
+
               <label>
                 Text source
                 <select
@@ -488,16 +499,20 @@ export function Generator() {
                   <option value="custom">Custom text</option>
                 </select>
               </label>
+
               {selectedField.contentMode === 'column' ? (
                 <label>
-                  Column
-                  <select value={selectedField.column} onChange={(event) => patchSelectedField({ column: event.target.value })}>
+                  Spreadsheet column
+                  <select
+                    value={selectedField.column}
+                    onChange={(event) => patchSelectedField({ column: event.target.value })}
+                  >
                     {spreadsheet?.headers.map((header) => <option key={header}>{header}</option>)}
                   </select>
                 </label>
               ) : (
                 <label>
-                  Text for every document
+                  Text used in every document
                   <textarea
                     className="custom-text-input"
                     value={selectedField.customText}
@@ -512,6 +527,7 @@ export function Generator() {
                   </span>
                 </label>
               )}
+
               <label className="checkbox-control">
                 <input
                   type="checkbox"
@@ -519,53 +535,89 @@ export function Generator() {
                   onChange={(event) => patchSelectedField({ coverOriginal: event.target.checked })}
                 />
                 <span>
-                  <strong>Cover original PDF content</strong>
-                  <small>Add a white block behind this field using its selected width.</small>
+                  <strong>Cover the original content</strong>
+                  <small>Draw a white block behind this text field before adding the new value.</small>
                 </span>
               </label>
+
               <label>
                 Font family
-                <select value={selectedField.fontFamily} onChange={(event) => patchSelectedField({ fontFamily: event.target.value as PositionedField['fontFamily'] })}>
-                  <option value="Helvetica">Helvetica</option>
-                  <option value="Times Roman">Times Roman</option>
-                  <option value="Courier">Courier</option>
+                <select
+                  value={selectedField.fontFamily}
+                  onChange={(event) => patchSelectedField({ fontFamily: event.target.value as PositionedField['fontFamily'] })}
+                >
+                  <option value="Times Roman">Times Roman · Classic certificate serif</option>
+                  <option value="Helvetica">Helvetica · Modern professional sans</option>
+                  <option value="Courier">Courier · Formal monospaced style</option>
                 </select>
               </label>
+
               <div className="two-column-controls">
                 <label>
                   Weight
-                  <select value={selectedField.fontWeight} onChange={(event) => patchSelectedField({ fontWeight: event.target.value as PositionedField['fontWeight'] })}>
+                  <select
+                    value={selectedField.fontWeight}
+                    onChange={(event) => patchSelectedField({ fontWeight: event.target.value as PositionedField['fontWeight'] })}
+                  >
                     <option value="regular">Regular</option>
                     <option value="bold">Bold</option>
                   </select>
                 </label>
                 <label>
                   Style
-                  <select value={selectedField.fontStyle} onChange={(event) => patchSelectedField({ fontStyle: event.target.value as PositionedField['fontStyle'] })}>
+                  <select
+                    value={selectedField.fontStyle}
+                    onChange={(event) => patchSelectedField({ fontStyle: event.target.value as PositionedField['fontStyle'] })}
+                  >
                     <option value="normal">Normal</option>
-                    <option value="italic">Italic or oblique</option>
+                    <option value="italic">Italic</option>
                   </select>
                 </label>
               </div>
+
               <label>
                 Alignment
-                <select value={selectedField.alignment} onChange={(event) => patchSelectedField({ alignment: event.target.value as PositionedField['alignment'] })}>
+                <select
+                  value={selectedField.alignment}
+                  onChange={(event) => patchSelectedField({ alignment: event.target.value as PositionedField['alignment'] })}
+                >
                   <option value="left">Left</option>
                   <option value="center">Centre</option>
                   <option value="right">Right</option>
                 </select>
               </label>
+
               <label>
                 Text size
-                <input type="range" min="0.015" max="0.08" step="0.0025" value={selectedField.fontSizeRatio} onChange={(event) => patchSelectedField({ fontSizeRatio: Number(event.target.value) })} />
+                <input
+                  type="range"
+                  min="0.015"
+                  max="0.08"
+                  step="0.0025"
+                  value={selectedField.fontSizeRatio}
+                  onChange={(event) => patchSelectedField({ fontSizeRatio: Number(event.target.value) })}
+                />
               </label>
+
               <label>
                 Field and cover width
-                <input type="range" min="0.08" max="0.9" step="0.025" value={selectedField.width} onChange={(event) => patchSelectedField({ width: Number(event.target.value) })} />
+                <input
+                  type="range"
+                  min="0.08"
+                  max="0.9"
+                  step="0.025"
+                  value={selectedField.width}
+                  onChange={(event) => patchSelectedField({ width: Number(event.target.value) })}
+                />
               </label>
+
               <label>
                 Text colour
-                <input type="color" value={selectedField.color} onChange={(event) => patchSelectedField({ color: event.target.value })} />
+                <input
+                  type="color"
+                  value={selectedField.color}
+                  onChange={(event) => patchSelectedField({ color: event.target.value })}
+                />
               </label>
             </section>
           ) : null}
@@ -575,9 +627,10 @@ export function Generator() {
               <div className="panel-title-row">
                 <h3>{selectedImage.asset.role === 'signature' ? 'Signature' : 'Logo'} settings</h3>
                 <button className="danger-link explicit-delete" type="button" onClick={() => deleteImage(selectedImage.id)}>
-                  Delete selected image
+                  Delete image
                 </button>
               </div>
+
               <div className="selected-image-summary">
                 <img src={selectedImage.asset.dataUrl} alt="Selected upload preview" />
                 <div>
@@ -585,6 +638,7 @@ export function Generator() {
                   <span>{selectedImage.asset.pixelWidth} × {selectedImage.asset.pixelHeight} px</span>
                 </div>
               </div>
+
               <label className="checkbox-control">
                 <input
                   type="checkbox"
@@ -592,19 +646,35 @@ export function Generator() {
                   onChange={(event) => patchSelectedImage({ coverOriginal: event.target.checked })}
                 />
                 <span>
-                  <strong>Cover original PDF content</strong>
-                  <small>Add a white block behind the entire image area.</small>
+                  <strong>Cover the original content</strong>
+                  <small>Draw a white block behind the complete image area.</small>
                 </span>
               </label>
+
               <label>
                 Image width
-                <input type="range" min="0.05" max="0.6" step="0.01" value={selectedImage.width} onChange={(event) => patchSelectedImage({ width: Number(event.target.value) })} />
+                <input
+                  type="range"
+                  min="0.05"
+                  max="0.6"
+                  step="0.01"
+                  value={selectedImage.width}
+                  onChange={(event) => patchSelectedImage({ width: Number(event.target.value) })}
+                />
               </label>
+
               <label>
                 Image height
-                <input type="range" min="0.03" max="0.4" step="0.01" value={selectedImage.height} onChange={(event) => patchSelectedImage({ height: Number(event.target.value) })} />
+                <input
+                  type="range"
+                  min="0.03"
+                  max="0.4"
+                  step="0.01"
+                  value={selectedImage.height}
+                  onChange={(event) => patchSelectedImage({ height: Number(event.target.value) })}
+                />
               </label>
-              <p className="control-help">Drag the image on the document. Drag it over the red bin and release to delete it.</p>
+              <p className="control-help">Drag the image on the document, or drag it onto the delete zone.</p>
             </section>
           ) : null}
         </aside>
@@ -613,29 +683,20 @@ export function Generator() {
           <div className="workspace-toolbar">
             <div>
               <strong>Document preview</strong>
-              <span>{pageSize ? `${Math.round(pageSize.width)} × ${Math.round(pageSize.height)} pt` : 'Upload a template'}</span>
+              <span>{pageSize ? `${Math.round(pageSize.width)} × ${Math.round(pageSize.height)} pt` : 'Add a PDF template'}</span>
             </div>
-            <div className="workspace-toolbar-actions">
-              {detectedText.length > 0 ? (
-                <button
-                  className={textSelectionMode ? 'active' : ''}
-                  type="button"
-                  onClick={() => setTextSelectionMode((current) => !current)}
-                >
-                  {textSelectionMode ? 'Finish text selection' : `Select PDF text (${detectedText.length})`}
-                </button>
-              ) : null}
-              {spreadsheet ? (
-                <label>
-                  Preview record
-                  <select value={recordIndex} onChange={(event) => setRecordIndex(Number(event.target.value))}>
-                    {spreadsheet.rows.map((row, index) => (
-                      <option key={index} value={index}>{index + 1}. {row[spreadsheet.headers[0]] || 'Unnamed record'}</option>
-                    ))}
-                  </select>
-                </label>
-              ) : null}
-            </div>
+            {spreadsheet ? (
+              <label>
+                Preview record
+                <select value={recordIndex} onChange={(event) => setRecordIndex(Number(event.target.value))}>
+                  {spreadsheet.rows.map((row, index) => (
+                    <option key={index} value={index}>
+                      {index + 1}. {row[spreadsheet.headers[0]] || 'Unnamed record'}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
           </div>
 
           {template ? (
@@ -646,22 +707,20 @@ export function Generator() {
               row={previewRow}
               selectedFieldId={selectedFieldId}
               selectedImageId={selectedImageId}
-              textSelectionMode={textSelectionMode}
               onSelectField={selectField}
               onSelectImage={selectImage}
               onChangeField={changeField}
               onChangeImage={changeImage}
               onDeleteField={deleteField}
               onDeleteImage={deleteImage}
-              onCreateFieldFromDetected={addDetectedField}
-              onDetectedText={updateDetectedText}
+              onDetectedFontDefaults={updateDetectedFontDefaults}
               onPageSize={updatePageSize}
             />
           ) : (
             <div className="empty-workspace">
               <div className="empty-icon">PDF</div>
-              <h2>Upload a PDF template</h2>
-              <p>The first page will appear here. You can select existing text or add text, signatures, and logos.</p>
+              <h2>Add your PDF template</h2>
+              <p>The first page appears here. You can then place spreadsheet fields, reusable text, signatures, and logos.</p>
             </div>
           )}
         </section>
@@ -671,19 +730,19 @@ export function Generator() {
             <div className="section-number">3</div>
             <div>
               <h2>Export</h2>
-              <p>Generate and name one PDF for each row.</p>
+              <p>Name and generate one PDF for every spreadsheet row.</p>
             </div>
           </section>
 
           <label>
-            Output file-name pattern
+            Output filename pattern
             <input
               className="filename-pattern-input"
               type="text"
               value={filenamePattern}
               maxLength={MAX_FILENAME_TEMPLATE_LENGTH}
               disabled={!spreadsheet}
-              placeholder="Document - {Certificate Number}"
+              placeholder="Certificate - {Certificate Number}"
               onChange={(event) => setFilenamePattern(normalizeFilenameTemplate(event.target.value))}
             />
             <span className="character-count">
@@ -708,7 +767,7 @@ export function Generator() {
           {filenameError ? <p className="inline-error">{filenameError}</p> : null}
           {filenamePreview ? (
             <div className="filename-preview">
-              <span>Preview</span>
+              <span>Filename preview</span>
               <strong>{filenamePreview}.pdf</strong>
             </div>
           ) : null}
@@ -716,22 +775,31 @@ export function Generator() {
           <div className="export-checklist">
             <div className={template ? 'complete' : ''}><span>{template ? '✓' : '1'}</span>PDF template</div>
             <div className={spreadsheet ? 'complete' : ''}><span>{spreadsheet ? '✓' : '2'}</span>Spreadsheet data</div>
-            <div className={elementCount ? 'complete' : ''}><span>{elementCount ? '✓' : '3'}</span>At least one text or image element</div>
-            <div className={filenamePattern && !filenameError ? 'complete' : ''}><span>{filenamePattern && !filenameError ? '✓' : '4'}</span>Valid file names</div>
+            <div className={elementCount ? 'complete' : ''}><span>{elementCount ? '✓' : '3'}</span>Text or image content</div>
+            <div className={filenamePattern && !filenameError ? 'complete' : ''}><span>{filenamePattern && !filenameError ? '✓' : '4'}</span>Valid filenames</div>
           </div>
 
-          <button className="primary-button full-width" type="button" disabled={!ready || progress.stage === 'generating' || progress.stage === 'zipping'} onClick={() => void generate()}>
-            {progress.stage === 'generating' || progress.stage === 'zipping' ? 'Working…' : `Generate ${spreadsheet?.rows.length ?? 0} PDFs`}
+          <button
+            className="primary-button full-width"
+            type="button"
+            disabled={!ready || progress.stage === 'generating' || progress.stage === 'zipping'}
+            onClick={() => void generate()}
+          >
+            {progress.stage === 'generating' || progress.stage === 'zipping'
+              ? 'Generating…'
+              : `Generate ${spreadsheet?.rows.length ?? 0} PDFs`}
           </button>
 
           {progress.stage !== 'idle' ? (
             <div className={`progress-card ${progress.stage}`}>
-              <div className="progress-track"><span style={{ width: `${progress.total ? (progress.current / progress.total) * 100 : 0}%` }} /></div>
+              <div className="progress-track">
+                <span style={{ width: `${progress.total ? (progress.current / progress.total) * 100 : 0}%` }} />
+              </div>
               <p>{progress.message}</p>
             </div>
           ) : null}
 
-          <p className="privacy-note">Source files and images are processed locally in this browser session.</p>
+          <p className="privacy-note">Documents are processed in this browser session and downloaded directly to your device.</p>
         </aside>
       </div>
     </main>
