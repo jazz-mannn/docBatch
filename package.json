@@ -1,9 +1,9 @@
 {
   "name": "docbatch",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
-  "description": "Browser-based bulk personalized PDF generator using spreadsheet data.",
+  "description": "Deployable bulk PDF document automation website using PDF templates and spreadsheet data.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
