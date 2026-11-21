@@ -108,7 +108,7 @@ Local development is secondary to the hosted website, but a complete setup guide
 [Step-by-step local development setup](docs/LOCAL_SETUP.md)
 
 ```bash
-git clone https://github.com/Rash-Au/docBatch.git
+git clone https://github.com/jazz-mannn/docBatch.git
 cd docBatch
 npm install
 npm run dev
